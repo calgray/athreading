@@ -6,7 +6,7 @@ authors = ["Callan Gray <cal.j.gray@gmail.com>"]
 packages = [{ include = "athreading", from = "src" }]
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.9"
 overrides = "^7.4.0"
 
 [tool.poetry.dev-dependencies]
