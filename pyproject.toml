@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "athreading"
-version = "0.1.0"
+version = "0.1.1"
 description = ""
 authors = ["Callan Gray <cal.j.gray@gmail.com>"]
 packages = [{ include = "athreading", from = "src" }]
