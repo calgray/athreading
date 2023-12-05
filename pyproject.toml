@@ -3,6 +3,7 @@ name = "athreading"
 version = "0.1.0"
 description = ""
 authors = ["Callan Gray <cal.j.gray@gmail.com>"]
+packages = [{ include = "athreading", from = "src" }]
 
 [tool.poetry.dependencies]
 python = "^3.11"
