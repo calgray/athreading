@@ -1,3 +1,5 @@
+"""Generator utilities."""
+
 from __future__ import annotations
 
 import asyncio
@@ -9,6 +11,8 @@ from contextlib import AbstractAsyncContextManager
 from types import TracebackType
 from typing import TypeVar
 
+from overrides import override
+
 YieldT = TypeVar("YieldT")
 SendT = TypeVar("SendT")
 
@@ -17,6 +21,16 @@ def generate(
     generator: Generator[YieldT, SendT | None, None],
     executor: ThreadPoolExecutor | None = None,
 ) -> ThreadedAsyncGenerator[YieldT, SendT]:
+    """Runs a synchronous generator with a ThreadPoolExecutor and exposes itself as a thread-safe
+    async generator.
+
+    Args:
+        generator (Generator[YieldT, SendT  |  None, None]): _description_
+        executor (ThreadPoolExecutor | None, optional): _description_. Defaults to None.
+
+    Returns:
+        ThreadedAsyncGenerator[YieldT, SendT]: _description_
+    """
     return ThreadedAsyncGenerator(generator, executor)
 
 
@@ -24,8 +38,8 @@ class ThreadedAsyncGenerator(
     AbstractAsyncContextManager["ThreadedAsyncGenerator[YieldT, SendT]"],
     AsyncGenerator[YieldT, SendT | None],
 ):
-    """
-    Runs a synchronous generator with a ThreadPoolExecutor and exposes itself as a thread-safe async generator.
+    """Runs a synchronous generator with a ThreadPoolExecutor and exposes itself as a thread-safe
+    async generator.
     """
 
     def __init__(
@@ -37,7 +51,8 @@ class ThreadedAsyncGenerator(
 
         Args:
             generator (Generator[ItemT, SendT, None]): Synchronous generator.
-            executor (ThreadPoolExecutor, optional): Shared thread pool instance. Defaults to ThreadPoolExecutor().
+            executor (ThreadPoolExecutor, optional): Shared thread pool instance. Defaults to
+            ThreadPoolExecutor().
         """
         self._semaphore = asyncio.Semaphore(0)
         self._event = threading.Event()
@@ -47,10 +62,12 @@ class ThreadedAsyncGenerator(
         self._generator = generator
         self._executor = executor if executor is not None else ThreadPoolExecutor()
 
+    @override
     async def __aenter__(self) -> ThreadedAsyncGenerator[YieldT, SendT]:
         self.stream_future = self._executor.submit(self.__stream)
         return self
 
+    @override
     async def __aexit__(
         self,
         __exc_type: type[BaseException] | None,
@@ -62,6 +79,7 @@ class ThreadedAsyncGenerator(
         self._send_queue.put(None)
         wait([self.stream_future])
 
+    @override
     async def __anext__(self) -> YieldT:
         assert (
             self.stream_future is not None
@@ -69,7 +87,9 @@ class ThreadedAsyncGenerator(
         self._send_queue.put(None)
         return await self.__get()
 
+    @override
     async def asend(self, value: SendT | None) -> YieldT:
+        """Send a value to the generator send queue"""
         self._send_queue.put(value)
         return await self.__get()
 
@@ -86,6 +106,7 @@ class ThreadedAsyncGenerator(
         __val: object = None,
         __tb: TracebackType | None = None,
     ) -> YieldT:
+        """Raise an exception immediately from the generator"""
         if isinstance(__typ, BaseException):
             raise __typ
         return self._generator.throw(__typ, __val, __tb)

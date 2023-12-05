@@ -1,3 +1,5 @@
+"""Function utilities."""
+
 import asyncio
 import queue
 from collections.abc import Callable, Coroutine
@@ -9,19 +11,17 @@ ReturnT = TypeVar("ReturnT")
 
 
 def call(
-    callable: Callable[ParamsT, ReturnT],
+    f: Callable[ParamsT, ReturnT],
     executor: ThreadPoolExecutor | None = None,
 ) -> Callable[ParamsT, Coroutine[None, None, ReturnT]]:
-    """
-    Wraps a callable to a Coroutine for calling using a ThreadPoolExecutor.
-    """
+    """Wraps a callable to a Coroutine for calling using a ThreadPoolExecutor."""
     event = asyncio.Event()
     q: queue.Queue[ReturnT] = queue.Queue()
     loop = asyncio.get_running_loop()
     executor = executor if executor is not None else ThreadPoolExecutor()
 
     def call_handler(*args: ParamsT.args, **kwargs: ParamsT.kwargs) -> None:
-        result = callable(*args, **kwargs)
+        result = f(*args, **kwargs)
         q.put(result)
         loop.call_soon_threadsafe(event.set)
 

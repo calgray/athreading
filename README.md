@@ -4,7 +4,7 @@
 
 `athreading` is asynchronous threading library for running and synchronizing worker threads with asyncio.
 
-# Usage
+## Usage
 
 ```python
 import athreading
@@ -15,31 +15,32 @@ from concurrent.futures import ThreadPoolExecutor
 
 
 def worker(delay, n):
-    for i in range(n):
-        time.sleep(delay)
-        yield datetime.datetime.now()
+   for i in range(n):
+      time.sleep(delay)
+      yield datetime.datetime.now()
 
 
 async def print_stream(id, stream):
-    async with stream:
-        async for value in stream:
-            print(id, value)
+   async with stream:
+      async for value in stream:
+         print(id, value)
 
 
 async def arun():
-    executor = ThreadPoolExecutor(max_workers=4)
-    await asyncio.gather(
-        print_stream(0, athreading.iterate(worker(1.0, 3), executor)),
-        print_stream(1, athreading.iterate(worker(1.0, 3), executor)),
-        print_stream(2, athreading.iterate(worker(1.0, 3), executor)),
-        print_stream(3, athreading.iterate(worker(1.0, 3), executor))
+   executor = ThreadPoolExecutor(max_workers=4)
+   await asyncio.gather(
+      *[
+         print_stream(tid, athreading.iterate(worker(1.0, 3), executor))
+         for tid in range(4)
+      ]
    )
 
 asyncio.run(arun())
 ```
 
 output:
-```
+
+```log
 0 2023-12-05 09:37:15.834115
 1 2023-12-05 09:37:15.835140
 2 2023-12-05 09:37:15.835749
@@ -53,7 +54,6 @@ output:
 2 2023-12-05 09:37:17.836113
 3 2023-12-05 09:37:17.836755
 ```
-
 
 ## Developement
 
