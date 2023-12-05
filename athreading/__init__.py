@@ -1,6 +1,6 @@
 """Execute computations asnychronously on a background thread."""
 
-from .call import call
+from .callable import call
 from .generator import ThreadedAsyncGenerator, generate
 from .iterator import ThreadedAsyncIterator, fiterate, iterate
 

@@ -3,7 +3,7 @@
         "editor.formatOnSave": true,
         "editor.defaultFormatter": "ms-python.python"
     },
-    "editor.rulers": [88],
+    "editor.rulers": [99],
 
     // --no-cov needed so that breakpoints work: https://github.com/microsoft/vscode-python/issues/693
     "python.testing.pytestArgs": ["--no-cov"],
