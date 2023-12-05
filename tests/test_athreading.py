@@ -1,5 +1,5 @@
 """Tests for the main module."""
-from myproject import __version__
+from athreading import __version__
 
 
 def test_version():

@@ -1,8 +1,8 @@
 [tool.poetry]
-name = "MyProject"
+name = "athreading"
 version = "0.1.0"
 description = ""
-authors = ["Jane Doe <jane_doe@some_email.com>"]
+authors = ["Callan Gray <cal.j.gray@gmail.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.11"
@@ -12,11 +12,13 @@ pytest = "^7.0"
 pytest-cov = "^4.0.0"
 pytest-mypy = "^0.10.0"
 pytest-mock = "^3.7.0"
+pytest-asyncio = "^0.20.3"
 isort = "^5.10.1"
 pre-commit = "^3.0.4"
 black = "^23.1.0"
 flake8 = "^6.0.0"
 flake8-docstrings = "^1.6.0"
+aiostream = "^0.4.5"
 
 [tool.mypy]
 disallow_any_explicit = true
@@ -25,6 +27,7 @@ warn_unreachable = true
 warn_unused_ignores = true
 disallow_untyped_defs = true
 exclude = [".venv/"]
+ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "tests.*"
@@ -34,7 +37,7 @@ disallow_untyped_defs = false
 profile = "black"
 
 [tool.pytest.ini_options]
-addopts = "-v --mypy -p no:warnings --cov=myproject --cov-report=html --doctest-modules --ignore=myproject/__main__.py"
+addopts = "-v --mypy -p no:warnings --cov=athreading --cov-report=html --doctest-modules --ignore=athreading/__main__.py"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
