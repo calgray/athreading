@@ -39,7 +39,7 @@ disallow_untyped_defs = false
 [tool.flake8]
 max-line-length = 99
 exclude = [
-    './tests'
+    'tests/*'
 ]
 extend-ignore = [
     'E203',

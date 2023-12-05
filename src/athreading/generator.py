@@ -6,7 +6,7 @@ import asyncio
 import queue
 import threading
 from collections.abc import AsyncGenerator, Generator
-from concurrent.futures import ThreadPoolExecutor, wait
+from concurrent.futures import Future, ThreadPoolExecutor, wait
 from contextlib import AbstractAsyncContextManager
 from types import TracebackType
 from typing import TypeVar
@@ -61,10 +61,11 @@ class ThreadedAsyncGenerator(
         self._loop = asyncio.get_running_loop()
         self._generator = generator
         self._executor = executor if executor is not None else ThreadPoolExecutor()
+        self._stream_future: Future[None] | None = None
 
     @override
     async def __aenter__(self) -> ThreadedAsyncGenerator[YieldT, SendT]:
-        self.stream_future = self._executor.submit(self.__stream)
+        self._stream_future = self._executor.submit(self.__stream)
         return self
 
     @override
@@ -74,16 +75,17 @@ class ThreadedAsyncGenerator(
         __val: BaseException | None,
         __tb: TracebackType | None,
     ) -> None:
+        assert self._stream_future is not None
         self._event.set()
         self._semaphore.release()
         self._send_queue.put(None)
-        wait([self.stream_future])
+        wait([self._stream_future])
 
     @override
     async def __anext__(self) -> YieldT:
         assert (
-            self.stream_future is not None
-        ), "Iterator started before entering thread context"
+            self._stream_future is not None
+        ), "Generator started before entering thread context"
         self._send_queue.put(None)
         return await self.__get()
 
