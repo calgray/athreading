@@ -4,7 +4,7 @@ from .callable import call
 from .generator import ThreadedAsyncGenerator, generate
 from .iterator import ThreadedAsyncIterator, _fiterate, iterate
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 
 __all__ = (
