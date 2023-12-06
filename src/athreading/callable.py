@@ -11,7 +11,7 @@ ReturnT = TypeVar("ReturnT")
 
 
 def call(
-    f: Callable[ParamsT, ReturnT],
+    fn: Callable[ParamsT, ReturnT],
     executor: ThreadPoolExecutor | None = None,
 ) -> Callable[ParamsT, Coroutine[None, None, ReturnT]]:
     """Wraps a callable to a Coroutine for calling using a ThreadPoolExecutor."""
@@ -21,7 +21,7 @@ def call(
     executor = executor if executor is not None else ThreadPoolExecutor()
 
     def call_handler(*args: ParamsT.args, **kwargs: ParamsT.kwargs) -> None:
-        result = f(*args, **kwargs)
+        result = fn(*args, **kwargs)
         q.put(result)
         loop.call_soon_threadsafe(event.set)
 
