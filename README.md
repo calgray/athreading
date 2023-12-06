@@ -2,38 +2,101 @@
 
 [![Test and build](https://github.com/calgray/athreading/actions/workflows/ci.yml/badge.svg)](https://github.com/calgray/athreading/actions/workflows/ci.yml)
 
-`athreading` is asynchronous threading library for running and synchronizing worker threads with asyncio.
+`athreading` is an asynchronous threading library for running and synchronizing worker threads with asyncio.
 
 ## Usage
 
+Although the python GIL prevents true parallelism, existing source code using synchronous sleep/wait calls can be offloaded to worker threads to avoid blocking the async I/O loop.
+
+### Callable → Coroutine
+
+Use `athread.call` to wrap a function/`Callable` to an async function/`Couroutine`:
+
+#### Synchronous<!--1-->
+
 ```python
-import athreading
-import asyncio
-import time
-import datetime
-from concurrent.futures import ThreadPoolExecutor
+def print_sqrt(x):
+    time.sleep(0.5)
+    result = math.sqrt(x)
+    print(datetime.datetime.now(), result)
+    return result
 
+res = (print_sqrt(2), print_sqrt(3), print_sqrt(4))
+print(res)
+```
 
-def worker(delay, n):
+output:
+
+```log
+2023-12-05 14:45:57.716696 1.4142135623730951
+2023-12-05 14:45:58.217192 1.7320508075688772
+2023-12-05 14:45:58.717934 2.0
+(1.4142135623730951 1.7320508075688772 2.0)
+```
+
+#### Asynchronous<!--1-->
+
+```python
+
+async def amain():
+    res = await asyncio.gather(
+        athreading.call(print_sqrt)(2),
+        athreading.call(print_sqrt)(3),
+        athreading.call(print_sqrt)(4)
+    )
+    print(res)
+
+asyncio.run(amain())
+```
+
+output:
+
+```log
+2023-12-05 14:45:59.219461 1.4142135623730951
+2023-12-05 14:45:59.220492 1.7320508075688772
+2023-12-05 14:45:59.221174 2.0
+(1.4142135623730951 1.7320508075688772 2.0)
+```
+
+### Iterator → AsyncIterator
+
+Use `athreading.iterate` to convert an `Iterable` interface to an `AsyncIterator` for iterating on the main thread.
+
+#### Synchronous<!--2-->
+
+```python
+def worker(n):
    for i in range(n):
-      time.sleep(delay)
-      yield datetime.datetime.now()
+       time.sleep(0.5)
+       yield datetime.datetime.now()
 
+def print_stream(id, stream):
+    for value in stream:
+        print("thread:", id, "time:", value)
 
+print_stream(0, worker(3))
+print_stream(1, worker(3))
+print_stream(2, worker(3))
+print_stream(3, worker(3))
+```
+
+#### Asynchronous<!--3-->
+
+```python
 async def print_stream(id, stream):
-   async with stream:
-      async for value in stream:
-         print(id, value)
+    async with stream:
+        async for value in stream:
+            print("thread:", id, "time:", value)
 
 
 async def arun():
    executor = ThreadPoolExecutor(max_workers=4)
    await asyncio.gather(
-      *[
-         print_stream(tid, athreading.iterate(worker(1.0, 3), executor))
-         for tid in range(4)
-      ]
-   )
+        *[
+            print_stream(tid, athreading.iterate(worker(1.0, 3), executor))
+            for tid in range(4)
+        ]
+    )
 
 asyncio.run(arun())
 ```
@@ -55,9 +118,11 @@ output:
 3 2023-12-05 09:37:17.836755
 ```
 
-## Developement
+## Maintenance
 
 This is a minimal Python 3.11 application that uses [poetry](https://python-poetry.org) for packaging and dependency management. It also provides [pre-commit](https://pre-commit.com/) hooks (for [isort](https://pycqa.github.io/isort/), [Black](https://black.readthedocs.io/en/stable/), [Flake8](https://flake8.pycqa.org/en/latest/) and [mypy](https://mypy.readthedocs.io/en/stable/)) and automated tests using [pytest](https://pytest.org/) and [GitHub Actions](https://github.com/features/actions). Pre-commit hooks are automatically kept updated with a dedicated GitHub Action, this can be removed and replace with [pre-commit.ci](https://pre-commit.ci) if using an public repo. It was developed by the [Imperial College Research Computing Service](https://www.imperial.ac.uk/admin-services/ict/self-service/research-support/rcs/).
+
+### Development
 
 To modify, test and request changes to this repository:
 
