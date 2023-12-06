@@ -2,11 +2,13 @@
 
 [![Test and build](https://github.com/calgray/athreading/actions/workflows/ci.yml/badge.svg)](https://github.com/calgray/athreading/actions/workflows/ci.yml)
 
-`athreading` is an asynchronous threading library for running and synchronizing worker threads with asyncio.
+`athreading` is an asynchronous threading library for running and synchronizing I/O threads with asyncio.
+
+Note: Python GIL only allows multi-threaded I/O parallelism and not multi-threaded CPU parallelism.
 
 ## Usage
 
-Although the python GIL prevents true parallelism, existing source code using synchronous sleep/wait calls can be offloaded to worker threads to avoid blocking the async I/O loop.
+Synchronous I/O functions and generators using sleep/wait operations can be run asyncronoously by offloading to worker threads and avoid blocking the async I/O loop.
 
 ### Callable → Coroutine
 
