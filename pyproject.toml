@@ -1,15 +1,20 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
 [tool.poetry]
 name = "athreading"
-version = "0.1.1"
+version = "0.1.2"
 description = ""
 authors = ["Callan Gray <cal.j.gray@gmail.com>"]
+license = "BSD-3-Clause"
 packages = [{ include = "athreading", from = "src" }]
 
 [tool.poetry.dependencies]
 python = "^3.9"
 overrides = "^7.4.0"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.test.dependencies]
 pytest = "^7.0"
 pytest-cov = "^4.0.0"
 pytest-mypy = "^0.10.0"
@@ -62,7 +67,3 @@ profile = "black"
 
 [tool.pytest.ini_options]
 addopts = "-v --mypy -p no:warnings --cov=athreading --cov-report=html --doctest-modules --ignore=athreading/__main__.py"
-
-[build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
