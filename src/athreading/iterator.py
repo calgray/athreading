@@ -7,7 +7,7 @@ import asyncio
 import queue
 import threading
 from collections.abc import AsyncGenerator, AsyncIterator, Iterable
-from concurrent.futures import ThreadPoolExecutor, wait
+from concurrent.futures import Future, ThreadPoolExecutor, wait
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from types import TracebackType
 from typing import TypeVar
@@ -34,7 +34,7 @@ def iterate(
 
 
 @asynccontextmanager
-async def fiterate(
+async def _fiterate(
     iterable: Iterable[YieldT], executor: ThreadPoolExecutor | None = None
 ) -> AsyncGenerator[AsyncIterator[YieldT], None]:
     """Wraps a synchronous generator to an AsyncGenerator for running using a ThreadPoolExecutor.
@@ -116,6 +116,7 @@ class ThreadedAsyncIterator(
         self._queue: queue.Queue[YieldT] = queue.Queue()
         self._iterable = iterable
         self._executor = executor if executor is not None else ThreadPoolExecutor()
+        self._stream_future: Future[None] | None = None
 
     @override
     async def __aenter__(self) -> ThreadedAsyncIterator[YieldT]:
@@ -130,6 +131,7 @@ class ThreadedAsyncIterator(
         __val: BaseException | None,
         __tb: TracebackType | None,
     ) -> None:
+        assert self._stream_future is not None
         self._event.set()
         self._semaphore.release()
         wait([self._stream_future])
@@ -137,7 +139,7 @@ class ThreadedAsyncIterator(
     async def __anext__(self) -> YieldT:
         assert (
             self._stream_future is not None
-        ), "Iterator started before entering thread context"
+        ), "Iterator started before entering context"
         if not self._event.is_set() or not self._queue.empty():
             await self._semaphore.acquire()
             if not self._queue.empty():
