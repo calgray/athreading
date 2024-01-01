@@ -2,14 +2,17 @@
 
 [[package]]
 name = "aiostream"
-version = "0.4.5"
+version = "0.5.2"
 description = "Generator-based operators for asynchronous iteration"
 optional = false
-python-versions = "*"
+python-versions = ">=3.8"
 files = [
-    {file = "aiostream-0.4.5-py3-none-any.whl", hash = "sha256:25b7c2d9c83570d78c0ef5a20e949b7d0b8ea3b0b0a4f22c49d3f721105a6057"},
-    {file = "aiostream-0.4.5.tar.gz", hash = "sha256:3ecbf87085230fbcd9605c32ca20c4fb41af02c71d076eab246ea22e35947d88"},
+    {file = "aiostream-0.5.2-py3-none-any.whl", hash = "sha256:054660370be9d37f6fe3ece3851009240416bd082e469fd90cc8673d3818cf71"},
+    {file = "aiostream-0.5.2.tar.gz", hash = "sha256:b71b519a2d66c38f0872403ab86417955b77352f08d9ad02ad46fc3926b389f4"},
 ]
+
+[package.dependencies]
+typing-extensions = "*"
 
 [[package]]
 name = "attrs"
@@ -738,4 +741,4 @@ test = ["covdefaults (>=2.3)", "coverage (>=7.2.7)", "coverage-enable-subprocess
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "869d7df0c892b0aea7678036d0995c71f0e025e8a22729ec954083a149bcd23d"
+content-hash = "3a5df714b1c9b7a4da082a61f14d69355df9ccd218197aad1c69effaec22674c"
