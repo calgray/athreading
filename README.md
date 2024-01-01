@@ -8,7 +8,7 @@ Note: Python GIL only allows multi-threaded I/O parallelism and not multi-thread
 
 ## Usage
 
-Synchronous I/O functions and generators using sleep/wait operations can be run asyncronoously by offloading to worker threads and avoid blocking the async I/O loop.
+Synchronous I/O functions and generators using sleep/wait operations can be run asynchronously by offloading to worker threads and avoid blocking the async I/O loop.
 
 ### Callable → Coroutine
 
@@ -88,7 +88,7 @@ print_stream(3, worker(3))
 async def print_stream(id, stream):
     async with stream:
         async for value in stream:
-            print("thread:", id, "time:", value)
+            print("stream:", id, "time:", value)
 
 
 async def arun():
@@ -106,18 +106,18 @@ asyncio.run(arun())
 output:
 
 ```log
-0 2023-12-05 09:37:15.834115
-1 2023-12-05 09:37:15.835140
-2 2023-12-05 09:37:15.835749
-3 2023-12-05 09:37:15.836387
-0 2023-12-05 09:37:16.834371
-1 2023-12-05 09:37:16.835346
-2 2023-12-05 09:37:16.835938
-3 2023-12-05 09:37:16.836573
-0 2023-12-05 09:37:17.834634
-1 2023-12-05 09:37:17.835552
-2 2023-12-05 09:37:17.836113
-3 2023-12-05 09:37:17.836755
+stream: 0 time: 2023-12-05 09:37:15.834115
+stream: 1 time: 2023-12-05 09:37:15.835140
+stream: 2 time: 2023-12-05 09:37:15.835749
+stream: 3 time: 2023-12-05 09:37:15.836387
+stream: 0 time: 2023-12-05 09:37:16.834371
+stream: 1 time: 2023-12-05 09:37:16.835346
+stream: 2 time: 2023-12-05 09:37:16.835938
+stream: 3 time: 2023-12-05 09:37:16.836573
+stream: 0 time: 2023-12-05 09:37:17.834634
+stream: 1 time: 2023-12-05 09:37:17.835552
+stream: 2 time: 2023-12-05 09:37:17.836113
+stream: 3 time: 2023-12-05 09:37:17.836755
 ```
 
 ## Maintenance
