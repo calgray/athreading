@@ -26,7 +26,7 @@ black = "^23.1.0"
 flake8 = "^6.0.0"
 flake8-docstrings = "^1.6.0"
 flake8-pyproject = "^1.2.2"
-aiostream = "^0.4.5"
+aiostream = ">=0.4.5,<0.6.0"
 
 [tool.mypy]
 disallow_any_explicit = true
