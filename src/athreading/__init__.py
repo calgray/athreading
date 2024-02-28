@@ -1,6 +1,6 @@
 """Execute computations asnychronously on a background thread."""
 
-from .callable import call
+from .callable import wrap_callable
 from .generator import ThreadedAsyncGenerator, generate
 from .iterator import ThreadedAsyncIterator, _fiterate, iterate
 
@@ -8,7 +8,7 @@ __version__ = "0.1.2"
 
 
 __all__ = (
-    "call",
+    "wrap_callable",
     "iterate",
     "_fiterate",
     "generate",

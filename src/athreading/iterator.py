@@ -6,22 +6,23 @@ from __future__ import annotations
 import asyncio
 import queue
 import threading
-from collections.abc import AsyncGenerator, AsyncIterator, Iterable
+from collections.abc import AsyncGenerator, AsyncIterator
 from concurrent.futures import Future, ThreadPoolExecutor, wait
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from types import TracebackType
-from typing import TypeVar
+from typing import Iterator, Iterable, Callable, ParamSpec, TypeVar
 
 from overrides import override
 
+ParamsT = ParamSpec("ParamsT")
 YieldT = TypeVar("YieldT")
 
 
 def iterate(
-    iterable: Iterable[YieldT],
+    iterator: Iterator[YieldT],
     executor: ThreadPoolExecutor | None = None,
 ) -> ThreadedAsyncIterator[YieldT]:
-    """Wraps a synchronous generator to an AsyncGenerator for running using a ThreadPoolExecutor.
+    """Wraps a synchronous Iterator to an AsyncIterator for running using a ThreadPoolExecutor.
 
     Args:
         iterable (Iterable[YieldT]): _description_
@@ -30,7 +31,27 @@ def iterate(
     Returns:
         ThreadedAsyncIterator[YieldT]: _description_
     """
-    return ThreadedAsyncIterator(iterable, executor)
+    return ThreadedAsyncIterator(iterator, executor)
+
+
+def wrap_iterator(
+    fn: Callable[ParamsT, Iterator[YieldT]],
+    executor: ThreadPoolExecutor | None = None,
+) -> Callable[ParamsT, ThreadedAsyncIterator[YieldT]]:
+    """_summary_
+
+    Args:
+        fn (Callable[ParamsT, Iterable[YieldT]]): _description_
+        executor (ThreadPoolExecutor | None, optional): _description_. Defaults to None.
+
+    Returns:
+        Callable[ParamsT, ThreadedAsyncIterator[YieldT]]: _description_
+    """
+    def wrapper(
+        *args: ParamsT.args, **kwargs: ParamsT.kwargs
+    ) -> ThreadedAsyncIterator[YieldT]:
+        return ThreadedAsyncIterator(fn(*args, **kwargs), executor)
+    return wrapper
 
 
 @asynccontextmanager
@@ -101,7 +122,7 @@ class ThreadedAsyncIterator(
 
     def __init__(
         self,
-        iterable: Iterable[YieldT],
+        iterator: Iterator[YieldT],
         executor: ThreadPoolExecutor | None = None,
     ):
         """Initilizes a ThreadedAsyncIterator from a synchronous iterator.
@@ -114,7 +135,7 @@ class ThreadedAsyncIterator(
         self._semaphore = asyncio.Semaphore(0)
         self._event = threading.Event()
         self._queue: queue.Queue[YieldT] = queue.Queue()
-        self._iterable = iterable
+        self._iterator = iterator
         self._executor = executor if executor is not None else ThreadPoolExecutor()
         self._stream_future: Future[None] | None = None
 
@@ -147,7 +168,7 @@ class ThreadedAsyncIterator(
         raise StopAsyncIteration
 
     def __stream(self) -> None:
-        for item in self._iterable:
+        for item in self._iterator:
             self._queue.put(item)
             self._loop.call_soon_threadsafe(self._semaphore.release)
             if self._event.is_set():
