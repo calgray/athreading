@@ -12,7 +12,7 @@ Synchronous I/O functions and generators using sleep/wait operations can be run 
 
 ### Callable → Coroutine
 
-Use `athread.call` to wrap a function/`Callable` to an async function/`Couroutine`:
+Use `athread.call` to wrap a function/`Callable` to an async function/function returning a `Coroutine`:
 
 #### Synchronous<!--1-->
 
@@ -62,7 +62,7 @@ output:
 
 ### Iterator → AsyncIterator
 
-Use `athreading.iterate` to convert an `Iterable` interface to an `AsyncIterator` for iterating on the I/O thread.
+Use `athreading.iterate` to convert an `Generator` interface to an `AsyncGenerator` for iterating on the I/O thread.
 
 #### Synchronous<!--2-->
 
