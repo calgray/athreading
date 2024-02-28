@@ -39,12 +39,12 @@ output:
 #### Asynchronous<!--1-->
 
 ```python
-
 async def amain():
+    aprint_sqrt = athreading.call(print_sqrt)
     res = await asyncio.gather(
-        athreading.call(print_sqrt)(2),
-        athreading.call(print_sqrt)(3),
-        athreading.call(print_sqrt)(4)
+        aprint_sqrt(2),
+        aprint_sqrt(3),
+        aprint_sqrt(4)
     )
     print(res)
 
@@ -62,7 +62,7 @@ output:
 
 ### Iterator → AsyncIterator
 
-Use `athreading.iterate` to convert an `Iterable` interface to an `AsyncIterator` for iterating on the main thread.
+Use `athreading.iterate` to convert an `Iterable` interface to an `AsyncIterator` for iterating on the I/O thread.
 
 #### Synchronous<!--2-->
 
@@ -82,7 +82,7 @@ print_stream(2, worker(3))
 print_stream(3, worker(3))
 ```
 
-#### Asynchronous<!--3-->
+#### Asynchronous<!--2-->
 
 ```python
 async def print_stream(id, stream):
@@ -119,6 +119,18 @@ stream: 1 time: 2023-12-05 09:37:17.835552
 stream: 2 time: 2023-12-05 09:37:17.836113
 stream: 3 time: 2023-12-05 09:37:17.836755
 ```
+
+### Generator → AsyncGenerator
+
+Use `athreading.generate` to convert an `Iterable` interface to an `AsyncIterator` for iterating on the I/O thread.
+
+#### Synchronous<!--3-->
+
+TODO
+
+#### Asynchronous<!--3-->
+
+TODO
 
 ## Maintenance
 
