@@ -15,7 +15,7 @@ def calculate(x: float, worker_delay: float):
 @pytest.mark.parametrize("main_delay", [0.0, 0.2])
 @pytest.mark.asyncio
 async def test_threaded_async_call_single(worker_delay: float, main_delay: float):
-    threaded_calculate_value = athreading.call(calculate)
+    threaded_calculate_value = athreading.wrap_callable(calculate)
     time.sleep(main_delay)
     result = await threaded_calculate_value(5, worker_delay)
     assert result == 25.0
@@ -25,7 +25,7 @@ async def test_threaded_async_call_single(worker_delay: float, main_delay: float
 @pytest.mark.parametrize("main_delay", [0.0, 0.2])
 @pytest.mark.asyncio
 async def test_threaded_async_call_cancel(worker_delay: float, main_delay: float):
-    threaded_calculate_value = athreading.call(calculate)
+    threaded_calculate_value = athreading.wrap_callable(calculate)
     time.sleep(main_delay)
     task = asyncio.create_task(threaded_calculate_value(5, worker_delay))
     task.cancel()

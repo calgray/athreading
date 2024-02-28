@@ -10,11 +10,13 @@ ParamsT = ParamSpec("ParamsT")
 ReturnT = TypeVar("ReturnT")
 
 
-def call(
+def wrap_callable(
     fn: Callable[ParamsT, ReturnT],
     executor: ThreadPoolExecutor | None = None,
 ) -> Callable[ParamsT, Coroutine[None, None, ReturnT]]:
-    """Wraps a callable to a Coroutine for calling using a ThreadPoolExecutor."""
+    """
+    Wraps a callable to a Coroutine for calling using a ThreadPoolExecutor.
+    """
     event = asyncio.Event()
     q: queue.Queue[ReturnT] = queue.Queue()
     loop = asyncio.get_running_loop()
