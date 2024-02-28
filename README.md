@@ -62,7 +62,7 @@ output:
 
 ### Iterator → AsyncIterator
 
-Use `athreading.iterate` to convert an `Generator` interface to an `AsyncGenerator` for iterating on the I/O thread.
+Use `athreading.iterate` to convert an `Iterator` interface to an `AsyncIterator` for iterating on the I/O thread.
 
 #### Synchronous<!--2-->
 
@@ -137,7 +137,7 @@ stream: 3 time: 2023-12-05 09:37:17.836755
 
 ### Generator → AsyncGenerator
 
-Use `athreading.generate` to convert an `Iterable` interface to an `AsyncIterator` for iterating on the I/O thread.
+Use `athreading.generate` to convert a `Generator` interface to an `AsyncGenerator` for iterating on the I/O thread.
 
 #### Synchronous<!--3-->
 
