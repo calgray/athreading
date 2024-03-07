@@ -54,17 +54,17 @@ class ThreadedAsyncGenerator(
             executor (ThreadPoolExecutor, optional): Shared thread pool instance. Defaults to
             ThreadPoolExecutor().
         """
-        self._semaphore = asyncio.Semaphore(0)
-        self._event = threading.Event()
+        self._yield_semaphore = asyncio.Semaphore(0)
+        self._done_event = threading.Event()
         self._send_queue: queue.Queue[SendT | None] = queue.Queue()
         self._yield_queue: queue.Queue[YieldT] = queue.Queue()
-        self._loop = asyncio.get_running_loop()
         self._generator = generator
         self._executor = executor if executor is not None else ThreadPoolExecutor()
         self._stream_future: Future[None] | None = None
 
     @override
     async def __aenter__(self) -> ThreadedAsyncGenerator[YieldT, SendT]:
+        self._loop = asyncio.get_running_loop()
         self._stream_future = self._executor.submit(self.__stream)
         return self
 
@@ -76,10 +76,14 @@ class ThreadedAsyncGenerator(
         __tb: TracebackType | None,
     ) -> None:
         assert self._stream_future is not None
-        self._event.set()
-        self._semaphore.release()
+        self._done_event.set()
+        self._yield_semaphore.release()
         self._send_queue.put(None)
         wait([self._stream_future])
+        # if self._stream_future.cancelled():
+        #     pass
+        # elif self._stream_future.exception():
+        #     raise self._stream_future.exception()
 
     @override
     async def __anext__(self) -> YieldT:
@@ -96,8 +100,8 @@ class ThreadedAsyncGenerator(
         return await self.__get()
 
     async def __get(self) -> YieldT:
-        if not self._event.is_set() or not self._yield_queue.empty():
-            await self._semaphore.acquire()
+        if not self._done_event.is_set() or not self._yield_queue.empty():
+            await self._yield_semaphore.acquire()
             if not self._yield_queue.empty():
                 return self._yield_queue.get(False)
         raise StopAsyncIteration
@@ -108,21 +112,22 @@ class ThreadedAsyncGenerator(
         __val: object = None,
         __tb: TracebackType | None = None,
     ) -> YieldT:
-        """Raise an exception immediately from the generator"""
+        """Raise a custom exception immediately from the generator"""
         if isinstance(__typ, BaseException):
             raise __typ
         return self._generator.throw(__typ, __val, __tb)
 
     def __stream(self) -> None:
-        while not self._event.is_set():
-            sent = self._send_queue.get()
-            if not self._event.is_set():
-                try:
-                    item = self._generator.send(sent)
-                    self._yield_queue.put(item)
-                    self._loop.call_soon_threadsafe(self._semaphore.release)
-                except StopIteration:
-                    break
-
-        self._event.set()
-        self._loop.call_soon_threadsafe(self._semaphore.release)
+        try:
+            while not self._done_event.is_set():
+                sent = self._send_queue.get()
+                if not self._done_event.is_set():
+                    try:
+                        item = self._generator.send(sent)
+                        self._yield_queue.put(item)
+                        self._loop.call_soon_threadsafe(self._yield_semaphore.release)
+                    except StopIteration:
+                        break
+        finally:
+            self._done_event.set()
+            self._loop.call_soon_threadsafe(self._yield_semaphore.release)

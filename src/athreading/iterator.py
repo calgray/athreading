@@ -6,11 +6,11 @@ from __future__ import annotations
 import asyncio
 import queue
 import threading
-from collections.abc import AsyncGenerator, AsyncIterator
+from collections.abc import AsyncGenerator, AsyncIterator, Callable, Iterable, Iterator
 from concurrent.futures import Future, ThreadPoolExecutor, wait
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from types import TracebackType
-from typing import Iterator, Iterable, Callable, ParamSpec, TypeVar
+from typing import ParamSpec, TypeVar
 
 from overrides import override
 
@@ -35,9 +35,11 @@ def iterate(
 
 
 def wrap_iterator(
-    fn: Callable[ParamsT, Iterator[YieldT]],
     executor: ThreadPoolExecutor | None = None,
-) -> Callable[ParamsT, ThreadedAsyncIterator[YieldT]]:
+) -> Callable[
+    [Callable[ParamsT, Iterator[YieldT]]],
+    Callable[ParamsT, ThreadedAsyncIterator[YieldT]],
+]:
     """_summary_
 
     Args:
@@ -47,15 +49,22 @@ def wrap_iterator(
     Returns:
         Callable[ParamsT, ThreadedAsyncIterator[YieldT]]: _description_
     """
-    def wrapper(
-        *args: ParamsT.args, **kwargs: ParamsT.kwargs
-    ) -> ThreadedAsyncIterator[YieldT]:
-        return ThreadedAsyncIterator(fn(*args, **kwargs), executor)
-    return wrapper
+
+    def decorator(
+        fn: Callable[ParamsT, Iterator[YieldT]],
+    ) -> Callable[ParamsT, ThreadedAsyncIterator[YieldT]]:
+        def wrapper(
+            *args: ParamsT.args, **kwargs: ParamsT.kwargs
+        ) -> ThreadedAsyncIterator[YieldT]:
+            return iterate(fn(*args, **kwargs), executor)
+
+        return wrapper
+
+    return decorator
 
 
 @asynccontextmanager
-async def _fiterate(
+async def fiterate(
     iterable: Iterable[YieldT], executor: ThreadPoolExecutor | None = None
 ) -> AsyncGenerator[AsyncIterator[YieldT], None]:
     """Wraps a synchronous generator to an AsyncGenerator for running using a ThreadPoolExecutor.
@@ -79,13 +88,15 @@ async def _fiterate(
     executor = executor if executor is not None else ThreadPoolExecutor()
 
     def stream() -> None:
-        for item in iterable:
-            yield_queue.put(item)
+        try:
+            for item in iterable:
+                yield_queue.put(item)
+                loop.call_soon_threadsafe(semaphore.release)
+                if event.is_set():
+                    break
+        finally:
+            event.set()
             loop.call_soon_threadsafe(semaphore.release)
-            if event.is_set():
-                break
-        event.set()
-        loop.call_soon_threadsafe(semaphore.release)
 
     async def async_genenerator() -> AsyncGenerator[YieldT, None]:
         while not event.is_set() or not yield_queue.empty():
@@ -128,12 +139,12 @@ class ThreadedAsyncIterator(
         """Initilizes a ThreadedAsyncIterator from a synchronous iterator.
 
         Args:
-            iterable (Generator[ItemT, SendT, None]): Synchronous iterable.
+            iterator (Generator[ItemT, SendT, None]): Synchronous iterable.
             executor (ThreadPoolExecutor, optional): Shared thread pool instance. Defaults to
             ThreadPoolExecutor().
         """
-        self._semaphore = asyncio.Semaphore(0)
-        self._event = threading.Event()
+        self._yield_semaphore = asyncio.Semaphore(0)
+        self._done_event = threading.Event()
         self._queue: queue.Queue[YieldT] = queue.Queue()
         self._iterator = iterator
         self._executor = executor if executor is not None else ThreadPoolExecutor()
@@ -153,25 +164,32 @@ class ThreadedAsyncIterator(
         __tb: TracebackType | None,
     ) -> None:
         assert self._stream_future is not None
-        self._event.set()
-        self._semaphore.release()
+        self._done_event.set()
+        self._yield_semaphore.release()
         wait([self._stream_future])
+        # if self._stream_future.cancelled():
+        #     pass
+        # elif self._stream_future.exception():
+        #     raise self._stream_future.exception()
 
     async def __anext__(self) -> YieldT:
         assert (
             self._stream_future is not None
         ), "Iterator started before entering context"
-        if not self._event.is_set() or not self._queue.empty():
-            await self._semaphore.acquire()
+        if not self._done_event.is_set() or not self._queue.empty():
+            # still waiting for items
+            await self._yield_semaphore.acquire()
             if not self._queue.empty():
                 return self._queue.get(False)
         raise StopAsyncIteration
 
     def __stream(self) -> None:
-        for item in self._iterator:
-            self._queue.put(item)
-            self._loop.call_soon_threadsafe(self._semaphore.release)
-            if self._event.is_set():
-                break
-        self._event.set()
-        self._loop.call_soon_threadsafe(self._semaphore.release)
+        try:
+            for item in self._iterator:
+                self._queue.put(item)
+                self._loop.call_soon_threadsafe(self._yield_semaphore.release)
+                if self._done_event.is_set():
+                    break
+        finally:
+            self._done_event.set()
+            self._loop.call_soon_threadsafe(self._yield_semaphore.release)

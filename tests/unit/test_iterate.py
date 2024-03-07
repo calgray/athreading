@@ -11,10 +11,11 @@ import athreading
 TEST_VALUES = [1, None, "", 2.0]
 
 
-def generate(delay=0.0):
-    for item in TEST_VALUES:
-        time.sleep(delay)
-        yield item
+def generate(delay=0.0, repeats=1):
+    for _ in range(repeats):
+        for item in TEST_VALUES:
+            time.sleep(delay)
+            yield item
 
 
 @pytest.mark.parametrize("worker_delay", [0.0, 0.2])
@@ -23,7 +24,7 @@ def generate(delay=0.0):
     "streamcontext",
     [
         lambda delay: aiostream.stream.iterate(generate(delay)).stream(),
-        lambda delay: athreading._fiterate(generate(delay)),
+        lambda delay: athreading.fiterate(generate(delay)),
         lambda delay: athreading.iterate(generate(delay)),
         lambda delay: athreading.generate(generate(delay)),
     ],
@@ -42,7 +43,7 @@ async def test_threaded_async_iterate_single(streamcontext, worker_delay, main_d
 @pytest.mark.parametrize(
     "streamcontext",
     [
-        lambda delay, e: athreading._fiterate(generate(delay), e),
+        lambda delay, e: athreading.fiterate(generate(delay), e),
         lambda delay, e: athreading.iterate(generate(delay), e),
         lambda delay, e: athreading.generate(generate(delay), e),
     ],
@@ -87,7 +88,7 @@ def generate_infinite(delay=0.0):
     "streamcontext",
     [
         lambda delay: astream.iterate(generate_infinite(delay)).stream(),
-        lambda delay: athreading._fiterate(generate_infinite(delay)),
+        lambda delay: athreading.fiterate(generate_infinite(delay)),
         lambda delay: athreading.iterate(generate_infinite(delay)),
         lambda delay: athreading.generate(generate_infinite(delay)),
     ],
@@ -102,3 +103,28 @@ async def test_threaded_async_iterate_cancel(streamcontext, worker_delay, main_d
             output.append(v)
             break
     assert output == [1]
+
+
+@pytest.mark.parametrize("worker_delay", [0.0, 0.2])
+@pytest.mark.parametrize("main_delay", [0.0, 0.2])
+@pytest.mark.parametrize(
+    "streamcontext",
+    [
+        lambda delay: astream.iterate(generate_infinite(delay)).stream(),
+        lambda delay: athreading.fiterate(generate_infinite(delay)),
+        lambda delay: athreading.iterate(generate_infinite(delay)),
+        lambda delay: athreading.generate(generate_infinite(delay)),
+    ],
+    ids=["aiostream", "fiterate", "iterate", "generate"],
+)
+@pytest.mark.asyncio
+async def test_threaded_async_iterate_exception(
+    streamcontext, worker_delay, main_delay
+):
+    output = []
+    with pytest.raises(TypeError):
+        async with streamcontext(worker_delay, repeats="invalid") as stream:
+            async for v in stream:
+                time.sleep(main_delay)
+                output.append(v)
+                break
