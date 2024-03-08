@@ -4,14 +4,52 @@ import asyncio
 import queue
 from collections.abc import Callable, Coroutine
 from concurrent.futures import ThreadPoolExecutor, wait
-from typing import ParamSpec, TypeVar
+from typing import ParamSpec, TypeVar, overload
 
 ParamsT = ParamSpec("ParamsT")
 ReturnT = TypeVar("ReturnT")
 
 
+@overload
+def call(
+    *,
+    executor: ThreadPoolExecutor | None = None,
+) -> Callable[
+    [Callable[ParamsT, ReturnT]], Callable[ParamsT, Coroutine[None, None, ReturnT]]
+]:
+    pass
+
+
+@overload
 def call(
     fn: Callable[ParamsT, ReturnT],
+) -> Callable[ParamsT, Coroutine[None, None, ReturnT]]:
+    pass
+
+
+def call(
+    fn: Callable[ParamsT, ReturnT] | None = None,
+    *,
+    executor: ThreadPoolExecutor | None = None,
+) -> (
+    Callable[ParamsT, Coroutine[None, None, ReturnT]]
+    | Callable[
+        [Callable[ParamsT, ReturnT]], Callable[ParamsT, Coroutine[None, None, ReturnT]]
+    ]
+):
+    """Wraps a callable to a Coroutine for calling using a ThreadPoolExecutor.
+
+    NOTE: must be called from the thread with running event loop.
+    """
+    if fn is None:
+        return _call_decorator(executor=executor)
+    else:
+        return _call(fn, executor=executor)
+
+
+def _call(
+    fn: Callable[ParamsT, ReturnT],
+    *,
     executor: ThreadPoolExecutor | None = None,
 ) -> Callable[ParamsT, Coroutine[None, None, ReturnT]]:
     """Wraps a callable to a Coroutine for calling using a ThreadPoolExecutor.
@@ -45,7 +83,7 @@ def call(
     return call_and_await_result
 
 
-def wrap_callable(
+def _call_decorator(
     executor: ThreadPoolExecutor | None = None,
 ) -> Callable[
     [Callable[ParamsT, ReturnT]], Callable[ParamsT, Coroutine[None, None, ReturnT]]
@@ -56,8 +94,8 @@ def wrap_callable(
     """
 
     def decorator(
-        fn: Callable[ParamsT, ReturnT]
+        fn: Callable[ParamsT, ReturnT],
     ) -> Callable[ParamsT, Coroutine[None, None, ReturnT]]:
-        return call(fn, executor)
+        return _call(fn, executor=executor)
 
     return decorator
