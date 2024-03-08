@@ -14,8 +14,8 @@ def square(x: float, delay: float = 0):
 
 
 @athreading.wrap_callable(executor=executor)
-def asquare(x: float):
-    return square(x)
+def asquare(x: float, delay: float):
+    return square(x, delay)
 
 
 def test_square():

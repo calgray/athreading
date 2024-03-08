@@ -80,10 +80,6 @@ class ThreadedAsyncGenerator(
         self._yield_semaphore.release()
         self._send_queue.put(None)
         wait([self._stream_future])
-        # if self._stream_future.cancelled():
-        #     pass
-        # elif self._stream_future.exception():
-        #     raise self._stream_future.exception()
 
     @override
     async def __anext__(self) -> YieldT:

@@ -167,10 +167,6 @@ class ThreadedAsyncIterator(
         self._done_event.set()
         self._yield_semaphore.release()
         wait([self._stream_future])
-        # if self._stream_future.cancelled():
-        #     pass
-        # elif self._stream_future.exception():
-        #     raise self._stream_future.exception()
 
     async def __anext__(self) -> YieldT:
         assert (
