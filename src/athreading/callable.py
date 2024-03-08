@@ -37,9 +37,6 @@ def call(
         future = executor.submit(call_handler, *args, **kwargs)
         await done_event.wait()
         wait([future])
-        if future.cancelled():
-            # TODO: untested
-            raise asyncio.CancelledError()
         e = future.exception()
         if e is not None:
             raise e
