@@ -17,7 +17,7 @@ def asquare_naive(x: float, worker_delay: float):
     return square(x, worker_delay)
 
 
-@athreading.wrap_callable(executor=ThreadPoolExecutor(max_workers=8))
+@athreading.call(executor=ThreadPoolExecutor(max_workers=8))
 def asquare(x: float, worker_delay: float):
     return square(x, worker_delay)
 
@@ -58,15 +58,3 @@ async def test_threaded_async_call_exception(
         TypeError, match="can't multiply sequence by non-int of type 'str'"
     ):
         _ = await fn("a", worker_delay)
-
-
-# test decorators
-
-
-# @pytest.mark.asyncio
-# async def test_simple_decorate_square():
-#     assert 4 == await asquare_naive(2)
-
-# @pytest.mark.asyncio
-# async def test_decorate_square():
-#     assert 4 == await asquare(2)

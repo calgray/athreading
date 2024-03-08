@@ -1,13 +1,14 @@
 import asyncio
 import time
-from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 import threaded
 
 import athreading
 
-executor = ThreadPoolExecutor()
+# pyinstument
+
+executor = threaded.ThreadPooled().executor
 
 
 def square(x: float, delay: float = 0.0):
@@ -15,7 +16,7 @@ def square(x: float, delay: float = 0.0):
     return x * x
 
 
-@athreading.wrap_callable(executor=executor)
+@athreading.call(executor=executor)
 def athreading_asquare(x: float, delay: float = 0.0):
     return square(x, delay)
 
