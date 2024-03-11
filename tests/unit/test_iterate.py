@@ -7,6 +7,7 @@ import aiostream.stream as astream
 import pytest
 
 import athreading
+from athreading.iterator import _fiterate
 
 TEST_VALUES = [1, None, "", 2.0]
 
@@ -56,7 +57,7 @@ def agenerate_simplest(delay=0.0, repeats=1):
     "streamcontext",
     [
         lambda delay: aiostream.stream.iterate(generator(delay)).stream(),
-        lambda delay: athreading._fiterate(generator(delay)),
+        lambda delay: _fiterate(generator(delay)),
         lambda delay: athreading.iterate(generator)(delay),
         lambda delay: aiterate(delay),
         lambda delay: aiterate_simpler(delay),
@@ -92,7 +93,7 @@ async def test_threaded_async_iterate_single(streamcontext, worker_delay, main_d
 @pytest.mark.parametrize(
     "streamcontext",
     [
-        lambda delay, e: athreading._fiterate(generator(delay), executor=e),
+        lambda delay, e: _fiterate(generator(delay), executor=e),
         lambda delay, e: athreading.iterate(generator, executor=e)(delay),
         lambda delay, e: athreading.iterate(executor=e)(generator)(delay),
         lambda delay, e: athreading.generate(generator, executor=e)(delay),
@@ -139,7 +140,7 @@ def generate_infinite(delay=0.0):
     "streamcontext",
     [
         lambda delay: astream.iterate(generate_infinite(delay)).stream(),
-        lambda delay: athreading._fiterate(generate_infinite(delay)),
+        lambda delay: _fiterate(generate_infinite(delay)),
         lambda delay: athreading.iterate(generate_infinite)(delay),
         lambda delay: athreading.generate(generate_infinite)(delay),
     ],
@@ -162,7 +163,7 @@ async def test_threaded_async_iterate_cancel(streamcontext, worker_delay, main_d
     "streamcontext",
     [
         lambda delay: astream.iterate(generate_infinite(delay)).stream(),
-        lambda delay: athreading._fiterate(generate_infinite(delay)),
+        lambda delay: _fiterate(generate_infinite(delay)),
         lambda delay: athreading.iterate(generate_infinite)(delay),
         lambda delay: athreading.generate(generate_infinite)(delay),
     ],

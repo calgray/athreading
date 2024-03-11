@@ -51,60 +51,37 @@ def iterate(
         Callable[ParamsT, ThreadedAsyncIterator[YieldT]],
     ]
 ):
-    """_summary_
+    """Decorates a thread-safe iterator with a ThreadPoolExecutor and exposes a thread-safe
+    AsyncIterator.
 
     Args:
-        fn (Callable[..., Iterator[YieldT]]): _description_
-        executor (ThreadPoolExecutor | None, optional): _description_. Defaults to None.
+        fn (Callable[ParamsT, Iterator[YieldT]], optional): Function returning an iterator or
+        iterable. Defaults to None.
+        executor (ThreadPoolExecutor, optional): Defaults to None.
 
     Returns:
-        ThreadedAsyncIterator[YieldT]: _description_
+        Callable[ParamsT, ThreadedAsyncIterator[YieldT]]: Decorated iterator function with lazy
+        argument evaluation.
     """
     if fn is None:
-        return _iterate_decorator(executor=executor)
+        return _create_iterate_decorator(executor=executor)
     else:
 
         @functools.wraps(fn)
         def wrapper(
             *args: ParamsT.args, **kwargs: ParamsT.kwargs
         ) -> ThreadedAsyncIterator[YieldT]:
-            return _iterate(fn(*args, **kwargs), executor=executor)
+            return ThreadedAsyncIterator(fn(*args, **kwargs), executor=executor)
 
         return wrapper
 
 
-def _iterate(
-    iterator: Iterator[YieldT],
-    executor: ThreadPoolExecutor | None = None,
-) -> ThreadedAsyncIterator[YieldT]:
-    """Wraps a synchronous Iterator to an AsyncIterator for running using a ThreadPoolExecutor.
-
-    Args:
-        iterable (Iterable[YieldT]): _description_
-        executor (ThreadPoolExecutor | None, optional): _description_. Defaults to None.
-
-    Returns:
-        ThreadedAsyncIterator[YieldT]: _description_
-    """
-    return ThreadedAsyncIterator(iterator, executor)
-
-
-def _iterate_decorator(
+def _create_iterate_decorator(
     executor: ThreadPoolExecutor | None = None,
 ) -> Callable[
     [Callable[ParamsT, Iterator[YieldT]]],
     Callable[ParamsT, ThreadedAsyncIterator[YieldT]],
 ]:
-    """_summary_
-
-    Args:
-        fn (Callable[ParamsT, Iterable[YieldT]]): _description_
-        executor (ThreadPoolExecutor | None, optional): _description_. Defaults to None.
-
-    Returns:
-        Callable[ParamsT, ThreadedAsyncIterator[YieldT]]: _description_
-    """
-
     def decorator(
         fn: Callable[ParamsT, Iterator[YieldT]],
     ) -> Callable[ParamsT, ThreadedAsyncIterator[YieldT]]:
@@ -112,7 +89,7 @@ def _iterate_decorator(
         def wrapper(
             *args: ParamsT.args, **kwargs: ParamsT.kwargs
         ) -> ThreadedAsyncIterator[YieldT]:
-            return _iterate(fn(*args, **kwargs), executor)
+            return ThreadedAsyncIterator(fn(*args, **kwargs), executor=executor)
 
         return wrapper
 

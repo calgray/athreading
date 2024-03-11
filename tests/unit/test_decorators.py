@@ -7,6 +7,25 @@ TEST_VALUES = [1, None, "", 2.0]
 executor = ThreadPoolExecutor()
 
 
+def square(x: float):
+    return x * x
+
+
+@athreading.call(executor=executor)
+def asquare(x: float):
+    return square(x=x)
+
+
+@athreading.call()
+def asquare_simpler(x: float):
+    return square(x=x)
+
+
+@athreading.call
+def asquare_simplest(x: float):
+    return square(x=x)
+
+
 def generator(delay=0.0, repeats=1):
     for _ in range(repeats):
         yield from TEST_VALUES
@@ -43,9 +62,9 @@ def agenerate_simplest(delay=0.0, repeats=1):
 
 
 def test_call_attrs():
-    assert aiterate.__name__ == "aiterate"
-    assert aiterate_simpler.__name__ == "aiterate_simpler"
-    assert aiterate_simplest.__name__ == "aiterate_simplest"
+    assert asquare.__name__ == "asquare"
+    assert asquare_simpler.__name__ == "asquare_simpler"
+    assert asquare_simplest.__name__ == "asquare_simplest"
 
 
 def test_iterate_attrs():
