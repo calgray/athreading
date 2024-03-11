@@ -2,7 +2,7 @@
 
 from .callable import call
 from .generator import ThreadedAsyncGenerator, generate
-from .iterator import ThreadedAsyncIterator, fiterate, iterate, wrap_iterator
+from .iterator import ThreadedAsyncIterator, _fiterate, _iterate_decorator, iterate
 
 __version__ = "0.1.2"
 
@@ -10,8 +10,8 @@ __version__ = "0.1.2"
 __all__ = (
     "call",
     "iterate",
-    "wrap_iterator",
-    "fiterate",
+    "_iterate_decorator",
+    "_fiterate",
     "generate",
     "ThreadedAsyncIterator",
     "ThreadedAsyncGenerator",

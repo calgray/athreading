@@ -10,7 +10,7 @@ from collections.abc import AsyncGenerator, AsyncIterator, Callable, Iterable, I
 from concurrent.futures import Future, ThreadPoolExecutor, wait
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from types import TracebackType
-from typing import ParamSpec, TypeVar
+from typing import ParamSpec, TypeVar, overload
 
 from overrides import override
 
@@ -18,7 +18,60 @@ ParamsT = ParamSpec("ParamsT")
 YieldT = TypeVar("YieldT")
 
 
+@overload
 def iterate(
+    fn: None = None,
+    *,
+    executor: ThreadPoolExecutor | None = None,
+) -> Callable[
+    [Callable[ParamsT, Iterator[YieldT]]],
+    Callable[ParamsT, ThreadedAsyncIterator[YieldT]],
+]:
+    pass
+
+
+@overload
+def iterate(
+    fn: Callable[ParamsT, Iterator[YieldT]],
+    *,
+    executor: ThreadPoolExecutor | None = None,
+) -> Callable[ParamsT, ThreadedAsyncIterator[YieldT]]:
+    pass
+
+
+def iterate(
+    fn: Callable[ParamsT, Iterator[YieldT]] | None = None,
+    *,
+    executor: ThreadPoolExecutor | None = None,
+) -> (
+    Callable[ParamsT, ThreadedAsyncIterator[YieldT]]
+    | Callable[
+        [Callable[ParamsT, Iterator[YieldT]]],
+        Callable[ParamsT, ThreadedAsyncIterator[YieldT]],
+    ]
+):
+    """_summary_
+
+    Args:
+        fn (Callable[..., Iterator[YieldT]]): _description_
+        executor (ThreadPoolExecutor | None, optional): _description_. Defaults to None.
+
+    Returns:
+        ThreadedAsyncIterator[YieldT]: _description_
+    """
+    if fn is None:
+        return _iterate_decorator(executor=executor)
+    else:
+
+        def wrapper(
+            *args: ParamsT.args, **kwargs: ParamsT.kwargs
+        ) -> ThreadedAsyncIterator[YieldT]:
+            return _iterate(fn(*args, **kwargs), executor=executor)
+
+        return wrapper
+
+
+def _iterate(
     iterator: Iterator[YieldT],
     executor: ThreadPoolExecutor | None = None,
 ) -> ThreadedAsyncIterator[YieldT]:
@@ -34,7 +87,7 @@ def iterate(
     return ThreadedAsyncIterator(iterator, executor)
 
 
-def wrap_iterator(
+def _iterate_decorator(
     executor: ThreadPoolExecutor | None = None,
 ) -> Callable[
     [Callable[ParamsT, Iterator[YieldT]]],
@@ -56,7 +109,7 @@ def wrap_iterator(
         def wrapper(
             *args: ParamsT.args, **kwargs: ParamsT.kwargs
         ) -> ThreadedAsyncIterator[YieldT]:
-            return iterate(fn(*args, **kwargs), executor)
+            return _iterate(fn(*args, **kwargs), executor)
 
         return wrapper
 
@@ -64,7 +117,7 @@ def wrap_iterator(
 
 
 @asynccontextmanager
-async def fiterate(
+async def _fiterate(
     iterable: Iterable[YieldT], executor: ThreadPoolExecutor | None = None
 ) -> AsyncGenerator[AsyncIterator[YieldT], None]:
     """Wraps a synchronous generator to an AsyncGenerator for running using a ThreadPoolExecutor.
