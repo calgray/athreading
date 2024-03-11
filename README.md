@@ -12,7 +12,7 @@ Synchronous I/O functions and generators using sleep/wait operations can be run 
 
 ### Callable → Coroutine
 
-Use `athread.call` to wrap a function/`Callable` to an async function/`Couroutine`:
+Use `athread.call` to wrap a function/`Callable` to an async function/function returning a `Coroutine`:
 
 #### Synchronous<!--1-->
 
@@ -39,12 +39,12 @@ output:
 #### Asynchronous<!--1-->
 
 ```python
-
 async def amain():
+    aprint_sqrt = athreading.call(print_sqrt)
     res = await asyncio.gather(
-        athreading.call(print_sqrt)(2),
-        athreading.call(print_sqrt)(3),
-        athreading.call(print_sqrt)(4)
+        aprint_sqrt(2),
+        aprint_sqrt(3),
+        aprint_sqrt(4)
     )
     print(res)
 
@@ -62,7 +62,7 @@ output:
 
 ### Iterator → AsyncIterator
 
-Use `athreading.iterate` to convert an `Iterable` interface to an `AsyncIterator` for iterating on the main thread.
+Use `athreading.iterate` to convert an `Iterator` interface to an `AsyncIterator` for iterating on the I/O thread.
 
 #### Synchronous<!--2-->
 
@@ -74,29 +74,44 @@ def worker(n):
 
 def print_stream(id, stream):
     for value in stream:
-        print("thread:", id, "time:", value)
+        print("stream:", id, "time:", value)
 
-print_stream(0, worker(3))
-print_stream(1, worker(3))
-print_stream(2, worker(3))
-print_stream(3, worker(3))
+for sid in range(4):
+    print_stream(sid, worker(3))
 ```
 
-#### Asynchronous<!--3-->
+output:
+
+```log
+stream: 0 time: 2023-12-05 09:37:38.758954
+stream: 0 time: 2023-12-05 09:37:39.259106
+stream: 0 time: 2023-12-05 09:37:39.759610
+stream: 1 time: 2023-12-05 09:37:40.260039
+stream: 1 time: 2023-12-05 09:37:40.760152
+stream: 1 time: 2023-12-05 09:37:41.260274
+stream: 2 time: 2023-12-05 09:37:41.760548
+stream: 2 time: 2023-12-05 09:37:42.262526
+stream: 2 time: 2023-12-05 09:37:42.762736
+stream: 3 time: 2023-12-05 09:37:43.262930
+stream: 3 time: 2023-12-05 09:37:43.763080
+stream: 3 time: 2023-12-05 09:37:44.263225
+```
+
+#### Asynchronous<!--2-->
 
 ```python
-async def print_stream(id, stream):
+async def aprint_stream(id, stream):
     async with stream:
         async for value in stream:
             print("stream:", id, "time:", value)
 
 
 async def arun():
-   executor = ThreadPoolExecutor(max_workers=4)
-   await asyncio.gather(
+    executor = ThreadPoolExecutor(max_workers=4)
+    await asyncio.gather(
         *[
-            print_stream(tid, athreading.iterate(worker(1.0, 3), executor))
-            for tid in range(4)
+            aprint_stream(sid, athreading.iterate(worker(3), executor))
+            for sid in range(4)
         ]
     )
 
@@ -119,6 +134,18 @@ stream: 1 time: 2023-12-05 09:37:17.835552
 stream: 2 time: 2023-12-05 09:37:17.836113
 stream: 3 time: 2023-12-05 09:37:17.836755
 ```
+
+### Generator → AsyncGenerator
+
+Use `athreading.generate` to convert a `Generator` interface to an `AsyncGenerator` for iterating on the I/O thread.
+
+#### Synchronous<!--3-->
+
+TODO
+
+#### Asynchronous<!--3-->
+
+TODO
 
 ## Maintenance
 
