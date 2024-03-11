@@ -8,7 +8,9 @@ import athreading
 
 # pyinstument
 
-executor = threaded.ThreadPooled().executor
+threadpool = threaded.ThreadPooled()
+threadpool.configure(4)
+executor = threadpool.executor
 
 
 def square(x: float, delay: float = 0.0):

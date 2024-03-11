@@ -25,14 +25,14 @@ def double_n(delay) -> Generator[int, int | None, None]:
 @pytest.mark.parametrize(
     "streamcontext",
     [
-        lambda delay: athreading.generate(double_n(delay)),
+        lambda delay: athreading.generate(double_n)(delay),
     ],
     ids=["generator"],
 )
 @pytest.mark.asyncio
 async def test_threaded_async_send_single(streamcontext, worker_delay, main_delay):
     outputs = []
-    # first asend must be next() or send(None)
+    # first usage must be __next__() or .send(None)
     async with streamcontext(worker_delay) as stream:
         for v in [None, 1, None, None, None, 3, None, None, None]:
             time.sleep(main_delay)

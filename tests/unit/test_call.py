@@ -6,23 +6,32 @@ import pytest
 
 import athreading
 
+executor = ThreadPoolExecutor()
+
 
 def square(x: float, worker_delay: float) -> float:
     time.sleep(worker_delay)
     return x * x
 
 
-@athreading.call
-def asquare_naive(x: float, worker_delay: float):
-    return square(x, worker_delay)
-
-
-@athreading.call(executor=ThreadPoolExecutor(max_workers=8))
+@athreading.call(executor=executor)
 def asquare(x: float, worker_delay: float):
     return square(x, worker_delay)
 
 
-@pytest.mark.parametrize("fn", [athreading.call(square), asquare_naive, asquare])
+@athreading.call()
+def asquare_simpler(x: float, worker_delay: float):
+    return square(x, worker_delay)
+
+
+@athreading.call
+def asquare_simplest(x: float, worker_delay: float):
+    return square(x, worker_delay)
+
+
+@pytest.mark.parametrize(
+    "fn", [athreading.call(square), asquare, asquare_simpler, asquare_simplest]
+)
 @pytest.mark.parametrize("worker_delay", [0.0, 0.2])
 @pytest.mark.parametrize("main_delay", [0.0, 0.2])
 @pytest.mark.asyncio
@@ -32,7 +41,9 @@ async def test_threaded_async_call_single(fn, worker_delay: float, main_delay: f
     assert result == 25.0
 
 
-@pytest.mark.parametrize("fn", [athreading.call(square), asquare_naive, asquare])
+@pytest.mark.parametrize(
+    "fn", [athreading.call(square), asquare, asquare_simpler, asquare_simplest]
+)
 @pytest.mark.parametrize("worker_delay", [0.2])
 @pytest.mark.parametrize("main_delay", [0.0, 0.2])
 @pytest.mark.asyncio
@@ -45,7 +56,9 @@ async def test_threaded_async_call_cancel(fn, worker_delay: float, main_delay: f
         await task
 
 
-@pytest.mark.parametrize("fn", [athreading.call(square), asquare_naive, asquare])
+@pytest.mark.parametrize(
+    "fn", [athreading.call(square), asquare, asquare_simpler, asquare_simplest]
+)
 @pytest.mark.parametrize("worker_delay", [0.2])
 @pytest.mark.parametrize("main_delay", [0.0, 0.2])
 @pytest.mark.asyncio
