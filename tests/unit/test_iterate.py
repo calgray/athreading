@@ -7,16 +7,47 @@ import aiostream.stream as astream
 import pytest
 
 import athreading
-from athreading import ThreadedAsyncIterator
 
 TEST_VALUES = [1, None, "", 2.0]
 
+executor = ThreadPoolExecutor()
 
-def generate(delay=0.0, repeats=1):
+
+def generator(delay=0.0, repeats=1):
     for _ in range(repeats):
         for item in TEST_VALUES:
             time.sleep(delay)
             yield item
+
+
+@athreading.iterate(executor=executor)
+def aiterate(delay=0.0, repeats=1):
+    yield from generator(delay, repeats)
+
+
+@athreading.iterate()
+def aiterate_simpler(delay=0.0, repeats=1):
+    yield from generator(delay, repeats)
+
+
+@athreading.iterate
+def aiterate_simplest(delay=0.0, repeats=1):
+    yield from generator(delay, repeats)
+
+
+@athreading.generate(executor=executor)
+def agenerate(delay=0.0, repeats=1):
+    yield from generator(delay, repeats)
+
+
+@athreading.generate()
+def agenerate_simpler(delay=0.0, repeats=1):
+    yield from generator(delay, repeats)
+
+
+@athreading.generate
+def agenerate_simplest(delay=0.0, repeats=1):
+    yield from generator(delay, repeats)
 
 
 @pytest.mark.parametrize("worker_delay", [0.0, 0.2])
@@ -24,12 +55,29 @@ def generate(delay=0.0, repeats=1):
 @pytest.mark.parametrize(
     "streamcontext",
     [
-        lambda delay: aiostream.stream.iterate(generate(delay)).stream(),
-        lambda delay: athreading._fiterate(generate(delay)),
-        lambda delay: athreading.iterate(generate)(delay),
-        lambda delay: athreading.generate(generate(delay)),
+        lambda delay: aiostream.stream.iterate(generator(delay)).stream(),
+        lambda delay: athreading._fiterate(generator(delay)),
+        lambda delay: athreading.iterate(generator)(delay),
+        lambda delay: aiterate(delay),
+        lambda delay: aiterate_simpler(delay),
+        lambda delay: aiterate_simplest(delay),
+        lambda delay: athreading.generate(generator)(delay),
+        lambda delay: agenerate(delay),
+        lambda delay: agenerate_simpler(delay),
+        lambda delay: agenerate_simplest(delay),
     ],
-    ids=["aiostream", "fiterate", "iterate", "generate"],
+    ids=[
+        "aiostream",
+        "fiterate",
+        "iterate",
+        "aiterate",
+        "aiterate_simpler",
+        "aiterate_simplest",
+        "generate",
+        "agenerate",
+        "agenerate_simpler",
+        "agenerate_simplest",
+    ],
 )
 @pytest.mark.asyncio
 async def test_threaded_async_iterate_single(streamcontext, worker_delay, main_delay):
@@ -44,11 +92,13 @@ async def test_threaded_async_iterate_single(streamcontext, worker_delay, main_d
 @pytest.mark.parametrize(
     "streamcontext",
     [
-        lambda delay, e: athreading._fiterate(generate(delay), executor=e),
-        lambda delay, e: athreading.iterate(generate, executor=e)(delay),
-        lambda delay, e: athreading.generate(generate(delay), e),
+        lambda delay, e: athreading._fiterate(generator(delay), executor=e),
+        lambda delay, e: athreading.iterate(generator, executor=e)(delay),
+        lambda delay, e: athreading.iterate(executor=e)(generator)(delay),
+        lambda delay, e: athreading.generate(generator, executor=e)(delay),
+        lambda delay, e: athreading.generate(executor=e)(generator)(delay),
     ],
-    ids=["fiterate", "iterate", "generate"],
+    ids=["fiterate", "iterate", "iterate2", "generate", "generate2"],
 )
 @pytest.mark.asyncio
 async def test_threaded_async_iterate_parallel(streamcontext):
@@ -91,7 +141,7 @@ def generate_infinite(delay=0.0):
         lambda delay: astream.iterate(generate_infinite(delay)).stream(),
         lambda delay: athreading._fiterate(generate_infinite(delay)),
         lambda delay: athreading.iterate(generate_infinite)(delay),
-        lambda delay: athreading.generate(generate_infinite(delay)),
+        lambda delay: athreading.generate(generate_infinite)(delay),
     ],
     ids=["aiostream", "fiterate", "iterate", "generate"],
 )
@@ -113,8 +163,8 @@ async def test_threaded_async_iterate_cancel(streamcontext, worker_delay, main_d
     [
         lambda delay: astream.iterate(generate_infinite(delay)).stream(),
         lambda delay: athreading._fiterate(generate_infinite(delay)),
-        lambda delay: athreading.iterate(generate_infinite(delay)),
-        lambda delay: athreading.generate(generate_infinite(delay)),
+        lambda delay: athreading.iterate(generate_infinite)(delay),
+        lambda delay: athreading.generate(generate_infinite)(delay),
     ],
     ids=["aiostream", "fiterate", "iterate", "generate"],
 )

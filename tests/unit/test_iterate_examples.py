@@ -21,38 +21,17 @@ def aiterator(delay=0.0):
     return iterator(delay)
 
 
-@athreading.iterate()
-def aiterator2(delay=0.0):
-    return iterator(delay)
-
-
-@athreading.iterate
-def aiterator3(delay=0.0):
-    return iterator(delay)
+def test_iterate():
+    output = []
+    for v in iterator(delay=0.5):
+        output.append(v)
+    assert output == TEST_VALUES
 
 
 @pytest.mark.asyncio
 async def test_aiterate():
     output = []
-    async with aiterator(delay=0.0) as stream:
-        async for v in stream:
-            output.append(v)
-    assert output == TEST_VALUES
-
-
-@pytest.mark.asyncio
-async def test_aiterate2():
-    output = []
-    async with aiterator2(delay=0.0) as stream:
-        async for v in stream:
-            output.append(v)
-    assert output == TEST_VALUES
-
-
-@pytest.mark.asyncio
-async def test_aiterate3():
-    output = []
-    async with aiterator3(delay=0.0) as stream:
+    async with aiterator(delay=0.5) as stream:
         async for v in stream:
             output.append(v)
     assert output == TEST_VALUES
