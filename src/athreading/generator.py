@@ -51,54 +51,37 @@ def generate(
         Callable[ParamsT, ThreadedAsyncGenerator[YieldT, SendT]],
     ]
 ):
-    """Runs a thread-safe synchronous generator with a ThreadPoolExecutor and exposes a
+    """Decorates a thread-safe synchronous generator with a ThreadPoolExecutor and exposes a
     thread-safe async generator.
 
     Args:
-        generator (Generator[YieldT, SendT  |  None, None]): _description_
-        executor (ThreadPoolExecutor | None, optional): _description_. Defaults to None.
+        fn (Callable[ParamsT, Generator[YieldT, SendT | None, None]], optional): Function returning
+        a generator. Defaults to None.
+        executor (ThreadPoolExecutor | None, optional): Defaults to None.
 
     Returns:
-        ThreadedAsyncGenerator[YieldT, SendT]: _description_
+        Callable[ParamsT, ThreadedAsyncGenerator[YieldT, SendT]]: Decorated generator function
+        with lazy argument evaluation.
     """
     if fn is None:
-        return _generate_decorator(executor=executor)
+        return _create_generate_decorator(executor=executor)
     else:
 
         @functools.wraps(fn)
         def wrapper(
             *args: ParamsT.args, **kwargs: ParamsT.kwargs
         ) -> ThreadedAsyncGenerator[YieldT, SendT]:
-            return _generate(fn(*args, **kwargs), executor=executor)
+            return ThreadedAsyncGenerator(fn(*args, **kwargs), executor=executor)
 
         return wrapper
 
 
-def _generate(
-    generator: Generator[YieldT, SendT | None, None],
-    executor: ThreadPoolExecutor | None = None,
-) -> ThreadedAsyncGenerator[YieldT, SendT]:
-    return ThreadedAsyncGenerator(generator, executor)
-
-
-def _generate_decorator(
+def _create_generate_decorator(
     executor: ThreadPoolExecutor | None = None,
 ) -> Callable[
     [Callable[ParamsT, Generator[YieldT, SendT | None, None]]],
     Callable[ParamsT, ThreadedAsyncGenerator[YieldT, SendT]],
 ]:
-    """_summary_
-
-    Args:
-        executor (ThreadPoolExecutor | None, optional): _description_. Defaults to None.
-
-    Returns:
-        Callable[
-            [Callable[ParamsT, Generator[YieldT, SendT | None, None]]],
-            Callable[ParamsT, ThreadedAsyncGenerator[YieldT, SendT]],
-        ]: _description_
-    """
-
     def decorator(
         fn: Callable[ParamsT, Generator[YieldT, SendT | None, None]],
     ) -> Callable[ParamsT, ThreadedAsyncGenerator[YieldT, SendT]]:
@@ -106,7 +89,7 @@ def _generate_decorator(
         def wrapper(
             *args: ParamsT.args, **kwargs: ParamsT.kwargs
         ) -> ThreadedAsyncGenerator[YieldT, SendT]:
-            return _generate(fn(*args, **kwargs), executor)
+            return ThreadedAsyncGenerator(fn(*args, **kwargs), executor)
 
         return wrapper
 
@@ -118,7 +101,7 @@ class ThreadedAsyncGenerator(
     AsyncGenerator[YieldT, SendT | None],
 ):
     """Runs a thread-safe synchronous generator with a ThreadPoolExecutor and exposes a
-    thread-safe async generator.
+    thread-safe AsyncGenerator.
     """
 
     def __init__(
