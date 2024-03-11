@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import asyncio
+import functools
 import queue
 import threading
 from collections.abc import AsyncGenerator, AsyncIterator, Callable, Iterable, Iterator
@@ -63,6 +64,7 @@ def iterate(
         return _iterate_decorator(executor=executor)
     else:
 
+        @functools.wraps(fn)
         def wrapper(
             *args: ParamsT.args, **kwargs: ParamsT.kwargs
         ) -> ThreadedAsyncIterator[YieldT]:
@@ -106,6 +108,7 @@ def _iterate_decorator(
     def decorator(
         fn: Callable[ParamsT, Iterator[YieldT]],
     ) -> Callable[ParamsT, ThreadedAsyncIterator[YieldT]]:
+        @functools.wraps(fn)
         def wrapper(
             *args: ParamsT.args, **kwargs: ParamsT.kwargs
         ) -> ThreadedAsyncIterator[YieldT]:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import functools
 import queue
 import threading
 from collections.abc import AsyncGenerator, Callable, Generator
@@ -64,6 +65,7 @@ def generate(
         return _generate_decorator(executor=executor)
     else:
 
+        @functools.wraps(fn)
         def wrapper(
             *args: ParamsT.args, **kwargs: ParamsT.kwargs
         ) -> ThreadedAsyncGenerator[YieldT, SendT]:
@@ -100,6 +102,7 @@ def _generate_decorator(
     def decorator(
         fn: Callable[ParamsT, Generator[YieldT, SendT | None, None]],
     ) -> Callable[ParamsT, ThreadedAsyncGenerator[YieldT, SendT]]:
+        @functools.wraps(fn)
         def wrapper(
             *args: ParamsT.args, **kwargs: ParamsT.kwargs
         ) -> ThreadedAsyncGenerator[YieldT, SendT]:
