@@ -6,7 +6,7 @@ import pytest
 
 import athreading
 
-executor = ThreadPoolExecutor()
+custom_executor = ThreadPoolExecutor()
 
 
 def square(x: float, worker_delay: float) -> float:
@@ -14,7 +14,7 @@ def square(x: float, worker_delay: float) -> float:
     return x * x
 
 
-@athreading.call(executor=executor)
+@athreading.call(executor=custom_executor)
 def asquare(x: float, worker_delay: float):
     return square(x, worker_delay)
 
@@ -29,11 +29,11 @@ def asquare_simplest(x: float, worker_delay: float):
     return square(x, worker_delay)
 
 
+@pytest.mark.parametrize("worker_delay", [0.0, 0.2])
+@pytest.mark.parametrize("main_delay", [0.0, 0.2])
 @pytest.mark.parametrize(
     "fn", [athreading.call(square), asquare, asquare_simpler, asquare_simplest]
 )
-@pytest.mark.parametrize("worker_delay", [0.0, 0.2])
-@pytest.mark.parametrize("main_delay", [0.0, 0.2])
 @pytest.mark.asyncio
 async def test_threaded_async_call_single(fn, worker_delay: float, main_delay: float):
     time.sleep(main_delay)
@@ -41,11 +41,11 @@ async def test_threaded_async_call_single(fn, worker_delay: float, main_delay: f
     assert result == 25.0
 
 
+@pytest.mark.parametrize("worker_delay", [0.2])
+@pytest.mark.parametrize("main_delay", [0.0, 0.2])
 @pytest.mark.parametrize(
     "fn", [athreading.call(square), asquare, asquare_simpler, asquare_simplest]
 )
-@pytest.mark.parametrize("worker_delay", [0.2])
-@pytest.mark.parametrize("main_delay", [0.0, 0.2])
 @pytest.mark.asyncio
 async def test_threaded_async_call_cancel(fn, worker_delay: float, main_delay: float):
     fn = athreading.call(square)
@@ -56,11 +56,11 @@ async def test_threaded_async_call_cancel(fn, worker_delay: float, main_delay: f
         await task
 
 
+@pytest.mark.parametrize("worker_delay", [0.2])
+@pytest.mark.parametrize("main_delay", [0.0, 0.2])
 @pytest.mark.parametrize(
     "fn", [athreading.call(square), asquare, asquare_simpler, asquare_simplest]
 )
-@pytest.mark.parametrize("worker_delay", [0.2])
-@pytest.mark.parametrize("main_delay", [0.0, 0.2])
 @pytest.mark.asyncio
 async def test_threaded_async_call_exception(
     fn, worker_delay: float, main_delay: float
