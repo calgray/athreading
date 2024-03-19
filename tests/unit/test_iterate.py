@@ -85,7 +85,7 @@ async def test_iterate_all(streamcontext, worker_delay, main_delay):
             time.sleep(main_delay)
             output.append(v)
     assert output == TEST_VALUES
-    await asyncio.get_event_loop().shutdown_default_executor()
+    await asyncio.wait_for(asyncio.get_running_loop().shutdown_default_executor(), 1.0)
 
 
 @pytest.mark.parametrize(
@@ -121,7 +121,7 @@ async def test_iterate_all_parallel(streamcontext):
         asyncio.gather(*[process() for i in range(max_workers)]),
         timeout=timeout,
     )
-    await asyncio.get_event_loop().shutdown_default_executor()
+    await asyncio.wait_for(asyncio.get_running_loop().shutdown_default_executor(), 1.0)
 
 
 def generate_infinite(delay=0.0):
@@ -152,7 +152,7 @@ async def test_iterate_cancel(streamcontext, worker_delay, main_delay):
             output.append(v)
             break
     assert output == [1]
-    await asyncio.get_event_loop().shutdown_default_executor()
+    await asyncio.wait_for(asyncio.get_running_loop().shutdown_default_executor(), 1.0)
 
 
 @pytest.mark.parametrize("worker_delay", [0.0, 0.1])
@@ -175,4 +175,4 @@ async def test_iterate_exception(streamcontext, worker_delay, main_delay):
                 time.sleep(main_delay)
                 output.append(v)
                 break
-    await asyncio.get_event_loop().shutdown_default_executor()
+    await asyncio.wait_for(asyncio.get_running_loop().shutdown_default_executor(), 1.0)

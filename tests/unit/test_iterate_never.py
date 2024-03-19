@@ -91,4 +91,4 @@ async def test_aiterate_never(streamcontext):
                 output.append(v)
             await t
     assert output == []
-    await asyncio.get_running_loop().shutdown_default_executor()
+    await asyncio.wait_for(asyncio.get_running_loop().shutdown_default_executor(), 1.0)
