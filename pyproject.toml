@@ -16,7 +16,7 @@ overrides = "^7.4.0"
 
 [tool.poetry.group.test.dependencies]
 pytest = ">=7,<9"
-pytest-cov = "^4.0.0"
+pytest-cov = ">=4,<6"
 pytest-mypy = "^0.10.0"
 pytest-mock = "^3.7.0"
 pytest-asyncio = "^0.20.3"
