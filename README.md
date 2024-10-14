@@ -4,7 +4,7 @@
 
 `athreading` is an asynchronous threading library for running and synchronizing I/O threads with asyncio.
 
-Note: Python GIL only allows multi-threaded I/O parallelism and not multi-threaded CPU parallelism.
+Note: Due to Python GIL, this library not not provide multi-threaded CPU parallelism unless using Python 3.13ft.
 
 ## Usage
 
