@@ -1,36 +1,84 @@
 """Function utilities."""
 
 import asyncio
-import queue
+import functools
 from collections.abc import Callable, Coroutine
-from concurrent.futures import ThreadPoolExecutor, wait
-from typing import ParamSpec, TypeVar
+from concurrent.futures import ThreadPoolExecutor
+from typing import ParamSpec, TypeVar, overload
 
 ParamsT = ParamSpec("ParamsT")
 ReturnT = TypeVar("ReturnT")
 
 
+@overload
+def call(
+    fn: None = None,
+    *,
+    executor: ThreadPoolExecutor | None = None,
+) -> Callable[
+    [Callable[ParamsT, ReturnT]], Callable[ParamsT, Coroutine[None, None, ReturnT]]
+]:
+    pass
+
+
+@overload
 def call(
     fn: Callable[ParamsT, ReturnT],
+) -> Callable[ParamsT, Coroutine[None, None, ReturnT]]:
+    pass
+
+
+def call(
+    fn: Callable[ParamsT, ReturnT] | None = None,
+    *,
+    executor: ThreadPoolExecutor | None = None,
+) -> (
+    Callable[ParamsT, Coroutine[None, None, ReturnT]]
+    | Callable[
+        [Callable[ParamsT, ReturnT]], Callable[ParamsT, Coroutine[None, None, ReturnT]]
+    ]
+):
+    """Wraps a thread-safe synchronous Callable with an ThreadPoolExecutor and exposes a
+    thread-safe asynchronous Callable.
+
+    Args:
+        fn (Callable[ParamsT, ReturnT], optional): thread-safe synchronous function. Defaults to
+        None.
+        executor: (ThreadPoolExecutor, optional): Defaults to asyncio default executor.
+
+    Returns:
+        Callable[ParamsT, Coroutine[None, None, ReturnT]]: thread-safe asynchronous function.
+    """
+    if fn is None:
+        return _create_call_decorator(executor=executor)
+    else:
+        return _call(fn, executor=executor)
+
+
+def _create_call_decorator(
+    executor: ThreadPoolExecutor | None = None,
+) -> Callable[
+    [Callable[ParamsT, ReturnT]], Callable[ParamsT, Coroutine[None, None, ReturnT]]
+]:
+    def decorator(
+        fn: Callable[ParamsT, ReturnT],
+    ) -> Callable[ParamsT, Coroutine[None, None, ReturnT]]:
+        return _call(fn, executor=executor)
+
+    return decorator
+
+
+def _call(
+    fn: Callable[ParamsT, ReturnT],
+    *,
     executor: ThreadPoolExecutor | None = None,
 ) -> Callable[ParamsT, Coroutine[None, None, ReturnT]]:
     """Wraps a callable to a Coroutine for calling using a ThreadPoolExecutor."""
-    event = asyncio.Event()
-    q: queue.Queue[ReturnT] = queue.Queue()
-    loop = asyncio.get_running_loop()
-    executor = executor if executor is not None else ThreadPoolExecutor()
 
-    def call_handler(*args: ParamsT.args, **kwargs: ParamsT.kwargs) -> None:
-        result = fn(*args, **kwargs)
-        q.put(result)
-        loop.call_soon_threadsafe(event.set)
+    @functools.wraps(fn)
+    async def wrapper(*args: ParamsT.args, **kwargs: ParamsT.kwargs) -> ReturnT:
+        return await asyncio.get_running_loop().run_in_executor(
+            executor, functools.partial(fn, *args, **kwargs)
+        )
 
-    async def call_and_await_result(
-        *args: ParamsT.args, **kwargs: ParamsT.kwargs
-    ) -> ReturnT:
-        invoke_future = executor.submit(call_handler, *args, **kwargs)
-        await event.wait()
-        wait([invoke_future])
-        return q.get()
-
-    return call_and_await_result
+    return wrapper

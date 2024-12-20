@@ -4,124 +4,126 @@
 from __future__ import annotations
 
 import asyncio
+import functools
 import queue
 import threading
-from collections.abc import AsyncGenerator, AsyncIterator, Iterable
-from concurrent.futures import Future, ThreadPoolExecutor, wait
-from contextlib import AbstractAsyncContextManager, asynccontextmanager
+from collections.abc import AsyncIterator, Callable, Iterator
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import AbstractAsyncContextManager
 from types import TracebackType
-from typing import TypeVar
+from typing import ParamSpec, TypeVar, overload
 
-from overrides import override
+from typing_extensions import override
 
+ParamsT = ParamSpec("ParamsT")
 YieldT = TypeVar("YieldT")
 
 
+@overload
 def iterate(
-    iterable: Iterable[YieldT],
+    fn: None = None,
+    *,
     executor: ThreadPoolExecutor | None = None,
-) -> ThreadedAsyncIterator[YieldT]:
-    """Wraps a synchronous generator to an AsyncGenerator for running using a ThreadPoolExecutor.
+) -> Callable[
+    [Callable[ParamsT, Iterator[YieldT]]],
+    Callable[ParamsT, ThreadedAsyncIterator[YieldT]],
+]:
+    pass
+
+
+@overload
+def iterate(
+    fn: Callable[ParamsT, Iterator[YieldT]],
+    *,
+    executor: ThreadPoolExecutor | None = None,
+) -> Callable[ParamsT, ThreadedAsyncIterator[YieldT]]:
+    pass
+
+
+def iterate(
+    fn: Callable[ParamsT, Iterator[YieldT]] | None = None,
+    *,
+    executor: ThreadPoolExecutor | None = None,
+) -> (
+    Callable[ParamsT, ThreadedAsyncIterator[YieldT]]
+    | Callable[
+        [Callable[ParamsT, Iterator[YieldT]]],
+        Callable[ParamsT, ThreadedAsyncIterator[YieldT]],
+    ]
+):
+    """Decorates a thread-safe iterator with a ThreadPoolExecutor and exposes a thread-safe
+    AsyncIterator.
 
     Args:
-        iterable (Iterable[YieldT]): _description_
-        executor (ThreadPoolExecutor | None, optional): _description_. Defaults to None.
+        fn (Callable[ParamsT, Iterator[YieldT]], optional): Function returning an iterator or
+        iterable. Defaults to None.
+        executor (ThreadPoolExecutor, optional): Defaults to None.
 
     Returns:
-        ThreadedAsyncIterator[YieldT]: _description_
+        Callable[ParamsT, ThreadedAsyncIterator[YieldT]]: Decorated iterator function with lazy
+        argument evaluation.
     """
-    return ThreadedAsyncIterator(iterable, executor)
+    if fn is None:
+        return _create_iterate_decorator(executor=executor)
+    else:
+
+        @functools.wraps(fn)
+        def wrapper(
+            *args: ParamsT.args, **kwargs: ParamsT.kwargs
+        ) -> ThreadedAsyncIterator[YieldT]:
+            return ThreadedAsyncIterator(fn(*args, **kwargs), executor=executor)
+
+        return wrapper
 
 
-@asynccontextmanager
-async def _fiterate(
-    iterable: Iterable[YieldT], executor: ThreadPoolExecutor | None = None
-) -> AsyncGenerator[AsyncIterator[YieldT], None]:
-    """Wraps a synchronous generator to an AsyncGenerator for running using a ThreadPoolExecutor.
+def _create_iterate_decorator(
+    executor: ThreadPoolExecutor | None = None,
+) -> Callable[
+    [Callable[ParamsT, Iterator[YieldT]]],
+    Callable[ParamsT, ThreadedAsyncIterator[YieldT]],
+]:
+    def decorator(
+        fn: Callable[ParamsT, Iterator[YieldT]],
+    ) -> Callable[ParamsT, ThreadedAsyncIterator[YieldT]]:
+        @functools.wraps(fn)
+        def wrapper(
+            *args: ParamsT.args, **kwargs: ParamsT.kwargs
+        ) -> ThreadedAsyncIterator[YieldT]:
+            return ThreadedAsyncIterator(fn(*args, **kwargs), executor=executor)
 
-    Args:
-        iterable (Iterable[ItemT]): a synchronously iterable sequence.
-        executor (ThreadPoolExecutor, optional): shared executor pool. Defaults to
-        concurrent.futures.ThreadPoolExecutor().
+        return wrapper
 
-    Returns:
-        AsyncGenerator[ItemT, None]: Async iterator to the results of the iterable running in the
-        executor.
-
-    Yields:
-        ItemT: item from the iterable.
-    """
-    semaphore = asyncio.Semaphore(0)
-    event = threading.Event()
-    yield_queue: queue.Queue[YieldT] = queue.Queue()
-    loop = asyncio.get_running_loop()
-    executor = executor if executor is not None else ThreadPoolExecutor()
-
-    def stream() -> None:
-        for item in iterable:
-            yield_queue.put(item)
-            loop.call_soon_threadsafe(semaphore.release)
-            if event.is_set():
-                break
-        event.set()
-        loop.call_soon_threadsafe(semaphore.release)
-
-    async def async_genenerator() -> AsyncGenerator[YieldT, None]:
-        while not event.is_set() or not yield_queue.empty():
-            await semaphore.acquire()
-            if not yield_queue.empty():
-                yield yield_queue.get(False)
-            else:
-                break
-
-    stream_future = executor.submit(stream)
-    yield async_genenerator()
-    event.set()
-    semaphore.release()
-    wait([stream_future])
+    return decorator
 
 
 class ThreadedAsyncIterator(
     AbstractAsyncContextManager["ThreadedAsyncIterator[YieldT]"], AsyncIterator[YieldT]
 ):
-    """Wraps a synchronous generator to an AsyncGenerator for running using a ThreadPoolExecutor.
-
-    Args:
-        iterable (Iterable[ItemT]): a synchronously iterable sequence.
-        executor (ThreadPoolExecutor, optional): shared executor pool. Defaults to
-        concurrent.futures.ThreadPoolExecutor().
-
-    Returns:
-        AsyncGenerator[ItemT, None]: Async iterator to the results of the iterable running in the
-        executor.
-
-    Yields:
-        ItemT: item from the iterable.
-    """
+    """Wraps a synchronous Iterator with a ThreadPoolExecutor and exposes an AsyncIterator."""
 
     def __init__(
         self,
-        iterable: Iterable[YieldT],
+        iterator: Iterator[YieldT],
         executor: ThreadPoolExecutor | None = None,
     ):
         """Initilizes a ThreadedAsyncIterator from a synchronous iterator.
 
         Args:
-            iterable (Generator[ItemT, SendT, None]): Synchronous iterable.
+            iterator (Iterator[YieldT]): Synchronous iterator or iterable.
             executor (ThreadPoolExecutor, optional): Shared thread pool instance. Defaults to
-            ThreadPoolExecutor().
+            asyncio ThreadPoolExecutor().
         """
-        self._semaphore = asyncio.Semaphore(0)
-        self._event = threading.Event()
+        self._yield_semaphore = asyncio.Semaphore(0)
+        self._done_event = threading.Event()
         self._queue: queue.Queue[YieldT] = queue.Queue()
-        self._iterable = iterable
-        self._executor = executor if executor is not None else ThreadPoolExecutor()
-        self._stream_future: Future[None] | None = None
+        self._iterator = iterator
+        self._executor = executor
+        self._stream_future: asyncio.Future[None] | None = None
 
     @override
     async def __aenter__(self) -> ThreadedAsyncIterator[YieldT]:
         self._loop = asyncio.get_running_loop()
-        self._stream_future = self._executor.submit(self.__stream)
+        self._stream_future = self._loop.run_in_executor(self._executor, self.__stream)
         return self
 
     @override
@@ -132,25 +134,27 @@ class ThreadedAsyncIterator(
         __tb: TracebackType | None,
     ) -> None:
         assert self._stream_future is not None
-        self._event.set()
-        self._semaphore.release()
-        wait([self._stream_future])
+        self._done_event.set()
+        self._yield_semaphore.release()
+        await self._stream_future
 
     async def __anext__(self) -> YieldT:
         assert (
             self._stream_future is not None
-        ), "Iterator started before entering context"
-        if not self._event.is_set() or not self._queue.empty():
-            await self._semaphore.acquire()
+        ), "Iteration started before entering context"
+        if not self._done_event.is_set() or not self._queue.empty():
+            await self._yield_semaphore.acquire()
             if not self._queue.empty():
                 return self._queue.get(False)
         raise StopAsyncIteration
 
     def __stream(self) -> None:
-        for item in self._iterable:
-            self._queue.put(item)
-            self._loop.call_soon_threadsafe(self._semaphore.release)
-            if self._event.is_set():
-                break
-        self._event.set()
-        self._loop.call_soon_threadsafe(self._semaphore.release)
+        try:
+            for item in self._iterator:
+                self._queue.put(item)
+                self._loop.call_soon_threadsafe(self._yield_semaphore.release)
+                if self._done_event.is_set():
+                    break
+        finally:
+            self._done_event.set()
+            self._loop.call_soon_threadsafe(self._yield_semaphore.release)
