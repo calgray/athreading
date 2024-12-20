@@ -10,7 +10,7 @@ Note: Due to Python GIL, this library not not provide multi-threaded CPU paralle
 
 Synchronous I/O functions and generators using sleep/wait operations can be run asynchronously by offloading to worker threads and avoid blocking the async I/O loop.
 
-### Callable → Coroutine
+### Callable[..., ResultT] → Callable[..., Coroutine[None, None, ResultT]]
 
 Use `athread.call` to wrap a function/`Callable` to an async function/function returning a `Coroutine`:
 
@@ -110,7 +110,7 @@ async def arun():
     executor = ThreadPoolExecutor(max_workers=4)
     await asyncio.gather(
         *[
-            aprint_stream(sid, athreading.iterate(worker(3), executor))
+            aprint_stream(sid, athreading.iterate(worker, executor=executor)(3))
             for sid in range(4)
         ]
     )

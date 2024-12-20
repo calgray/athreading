@@ -12,7 +12,6 @@ packages = [{ include = "athreading", from = "src" }]
 
 [tool.poetry.dependencies]
 python = "^3.9"
-overrides = "^7.4.0"
 
 [tool.poetry.group.test.dependencies]
 pytest = ">=7,<9"
@@ -20,6 +19,7 @@ pytest-cov = "^4.0.0"
 pytest-mypy = "^0.10.0"
 pytest-mock = "^3.7.0"
 pytest-asyncio = "^0.20.3"
+pytest-benchmark = "^4.0.0"
 isort = "^5.10.1"
 pre-commit = "^3.0.4"
 black = ">=23.1,<25.0"
@@ -27,6 +27,7 @@ flake8 = ">=6,<8"
 flake8-docstrings = "^1.6.0"
 flake8-pyproject = "^1.2.2"
 aiostream = ">=0.4.5,<0.6.0"
+threaded = "^4.2.0"
 
 [tool.mypy]
 disallow_any_explicit = true
