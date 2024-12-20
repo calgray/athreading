@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "athreading"
-version = "0.1.2"
+version = "0.2.0"
 description = ""
 authors = ["Callan Gray <cal.j.gray@gmail.com>"]
 license = "BSD-3-Clause"
