@@ -39,6 +39,10 @@ jobs:
       with:
         poetry-version: 1.2.2
 
+    - name: Setup Poetry
+      if: runner.os == 'macOS'
+      run: poetry env use ${{ matrix.python-version }}
+
     - name: Install dependencies
       run: poetry install
 
