@@ -5,8 +5,6 @@ import threaded
 
 import athreading
 
-# pyinstument
-
 threadpool = threaded.ThreadPooled()
 threadpool.configure(4)
 executor = threadpool.executor

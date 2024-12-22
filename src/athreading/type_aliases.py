@@ -16,14 +16,8 @@ class AsyncIteratorContext(
     """Interface for safe-use of a athreading AsyncIterator"""
 
 
-# AsyncIteratorContext = AbstractAsyncContextManager[AsyncIterator[_YieldT]]
-
-
 class AsyncGeneratorContext(
     AsyncGenerator[_YieldT, _SendT],
     AbstractAsyncContextManager[AsyncGenerator[_YieldT, _SendT]],
 ):
     """Interface for safe-use of a athreading AsyncGenerator"""
-
-
-# AsyncGeneratorContext = AbstractAsyncContextManager[AsyncGenerator[_YieldT, _SendT]]
