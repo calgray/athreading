@@ -2,7 +2,6 @@ import asyncio
 import time
 from concurrent.futures import ThreadPoolExecutor
 
-import aiostream
 import aiostream.stream as astream
 import pytest
 
@@ -55,7 +54,7 @@ def agenerate_simplest(delay=0.0, repeats=1):
 @pytest.mark.parametrize(
     "streamcontext",
     [
-        lambda delay: aiostream.stream.iterate(generator(delay)).stream(),
+        lambda delay: astream.iterate(generator(delay)).stream(),
         lambda delay: athreading.iterate(generator)(delay),
         lambda delay: aiterate(delay),
         lambda delay: aiterate_simpler(delay),

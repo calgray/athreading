@@ -1,7 +1,6 @@
 import asyncio
 import time
 
-import pytest
 import threaded
 
 import athreading
@@ -31,6 +30,13 @@ def threaded_asquare(x: float, delay: float = 0.0):
 def test_athreading_benchmark(benchmark):
     def main():
         return asyncio.run(athreading_asquare(2, 0.0))
+
+    assert 4 == benchmark(main)
+
+
+def test_to_thread_benchmark(benchmark):
+    def main():
+        return asyncio.run(asyncio.to_thread(square, 2, 0.0))
 
     assert 4 == benchmark(main)
 
