@@ -2,9 +2,13 @@
 
 [![Test and build](https://github.com/calgray/athreading/actions/workflows/ci.yml/badge.svg)](https://github.com/calgray/athreading/actions/workflows/ci.yml)
 
-`athreading` is an asynchronous threading library for running and synchronizing I/O threads with asyncio.
+`athreading` is an asynchronous threading library for adapting sunchronous I/O to asynchronous I/O using functional threads sychronized wrappers and decorators. The available decorators include:
 
-Note: Due to Python GIL, this library not not provide multi-threaded CPU parallelism unless using Python 3.13ft.
+* `@athreading.call`
+* `@athreading.iterate`
+* `@athreading.generate`
+
+Note: Due to Python GIL, this library not not provide multi-threaded CPU parallelism unless using Python 3.9 nogil or Python 3.13 with free threading enabled.
 
 ## Usage
 
