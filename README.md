@@ -7,7 +7,7 @@
 * `@athreading.iterate`
 * `@athreading.generate`
 
-Note: Due to Python GIL, this library not not provide multi-threaded CPU parallelism unless using Python 3.13 with free threading enabled 
+Note: Due to Python GIL, this library not not provide multi-threaded CPU parallelism unless using Python 3.9 nogil or Python 3.13 with free threading enabled.
 
 ## Usage
 
