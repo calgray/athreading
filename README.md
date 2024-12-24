@@ -2,7 +2,8 @@
 
 [![Test and build](https://github.com/calgray/athreading/actions/workflows/ci.yml/badge.svg)](https://github.com/calgray/athreading/actions/workflows/ci.yml)
 
-`athreading` is an asynchronous threading library for adapting sunchronous I/O to asynchronous I/O using functional threads sychronized wrappers and decorators. Available decorators include:
+`athreading` is an asynchronous threading library for adapting sunchronous I/O to asynchronous I/O using functional threads sychronized wrappers and decorators. The available decorators include:
+
 * `@athreading.call`
 * `@athreading.iterate`
 * `@athreading.generate`
