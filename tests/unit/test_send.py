@@ -41,7 +41,7 @@ async def adoubler(delay: float) -> AsyncGenerator[int, Optional[int]]:
 @pytest.mark.parametrize(
     "streamcontext",
     [
-        lambda delay: athreading.asyncgeneratorcontext(adoubler(delay)),
+        lambda delay: adoubler(delay),
         lambda delay: athreading.generate(doubler)(delay),
     ],
     ids=["adoubler", "generate"],

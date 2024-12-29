@@ -30,7 +30,7 @@ async def agenerate_infinite(delay: float) -> AsyncGenerator[int, Optional[int]]
 @pytest.mark.parametrize(
     "streamcontext",
     [
-        lambda delay: athreading.asyncgeneratorcontext(agenerate_infinite(delay)),
+        lambda delay: agenerate_infinite(delay),
         lambda delay: athreading.generate(generate_infinite)(delay),
     ],
     ids=["control", "generate"],
@@ -52,7 +52,7 @@ async def test_throw_immediate(streamcontext, worker_delay, main_delay):
 @pytest.mark.parametrize(
     "streamcontext",
     [
-        lambda delay: athreading.asyncgeneratorcontext(agenerate_infinite(delay)),
+        lambda delay: agenerate_infinite(delay),
         lambda delay: athreading.generate(generate_infinite)(delay),
     ],
     ids=["control", "generate"],

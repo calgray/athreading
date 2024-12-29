@@ -13,11 +13,11 @@ _SendT = TypeVar("_SendT")
 class AsyncIteratorContext(
     AsyncIterator[_YieldT], AbstractAsyncContextManager[AsyncIterator[_YieldT]]
 ):
-    """Interface for safe-use of a athreading AsyncIterator"""
+    """Interface for thread-safe use of an AsyncIterator via an AsyncContextManager."""
 
 
 class AsyncGeneratorContext(
     AsyncGenerator[_YieldT, _SendT],
     AbstractAsyncContextManager[AsyncGenerator[_YieldT, _SendT]],
 ):
-    """Interface for safe-use of a athreading AsyncGenerator"""
+    """Interface for thread-safe use of an AsyncGenerator via an AsyncContextManager."""
