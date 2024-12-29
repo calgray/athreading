@@ -7,10 +7,10 @@ import functools
 import queue
 import sys
 import threading
-from collections.abc import AsyncGenerator, Callable, Generator
+from collections.abc import Callable, Generator
 from concurrent.futures import ThreadPoolExecutor
 from types import TracebackType
-from typing import Literal, Optional, TypeVar, Union
+from typing import Optional, TypeVar, Union
 
 if sys.version_info[:2] > (3, 11):
     from typing import ParamSpec, overload, override
@@ -19,81 +19,12 @@ else:
 
 from athreading.type_aliases import AsyncGeneratorContext
 
-__all__ = ["generate", "asyncgeneratorcontext", "ThreadedAsyncGenerator"]
+__all__ = ["generate", "ThreadedAsyncGenerator"]
 
 
 ParamsT = ParamSpec("ParamsT")
 YieldT = TypeVar("YieldT")
 SendT = TypeVar("SendT")
-
-
-def asyncgeneratorcontext(
-    agenerator: AsyncGenerator[YieldT, SendT]
-) -> AsyncGeneratorContext[YieldT, SendT]:
-    """Adapts an Asyncgenerator to an AsyncGeneratorContext"""
-    if isinstance(agenerator, AsyncGeneratorContext):
-        return agenerator
-    else:
-        return SafeAsyncGeneratorContext(agenerator)
-
-
-class SafeAsyncGeneratorContext(AsyncGeneratorContext[YieldT, SendT]):
-    """Asynchronous Generator with context management.
-
-    The context management makes sure the aclose asynchronous method
-    of the corresponding generator has run before it exits. It also issues
-    warnings and RuntimeError if it is used incorrectly.
-    """
-
-    _STATE = Union[Literal["STANDBY"], Literal["RUNNING"], Literal["FINISHED"]]
-
-    def __init__(self, agenerator: AsyncGenerator[YieldT, SendT]):
-        if isinstance(agenerator, AsyncGeneratorContext):
-            raise TypeError(f"{agenerator!r} is already an AsyncGeneratorContext")
-        self._agenerator = agenerator
-        self._state = "STANDBY"
-
-    @override
-    async def __aenter__(self) -> AsyncGenerator[YieldT, SendT]:
-        if self._state == "RUNNING":
-            raise RuntimeError(f"{type(self)} has already been entered")
-        if self._state == "FINISHED":
-            raise RuntimeError(f"{type(self)} is closed and cannot be iterated")
-        self._state = "RUNNING"
-        return self._agenerator
-
-    @override
-    async def __aexit__(
-        self,
-        __exc_type: Optional[type[BaseException]],
-        __val: Optional[BaseException],
-        __tb: Optional[TracebackType],
-    ) -> None:
-        if self._state == "STANDBY":
-            raise RuntimeError(f"{type(self)} has not been entered")
-        if self._state != "RUNNING":
-            raise RuntimeError(f"{type(self)} has already been exitted")
-        self._state = "FINISHED"
-        await self._agenerator.aclose()
-
-    @override
-    async def asend(self, __value: SendT) -> YieldT:
-        return await self._agenerator.asend(__value)
-
-    @override
-    async def aclose(self) -> None:
-        return await self._agenerator.aclose()
-
-    @override
-    async def athrow(
-        self,
-        __typ: Union[type[BaseException], BaseException],
-        __val: object = None,
-        __tb: Optional[TracebackType] = None,
-    ) -> YieldT:
-        if isinstance(__typ, BaseException):
-            raise __typ
-        return await self._agenerator.athrow(__typ, __val, __tb)
 
 
 @overload
