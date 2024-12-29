@@ -5,7 +5,8 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry]
 name = "athreading"
 version = "0.1.2"
-description = ""
+description = "Asynchronous threading package for Python"
+readme = "README.md"
 authors = ["Callan Gray <cal.j.gray@gmail.com>"]
 license = "BSD-3-Clause"
 packages = [{ include = "athreading", from = "src" }]
