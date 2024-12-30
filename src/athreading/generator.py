@@ -127,7 +127,9 @@ class ThreadedAsyncGenerator(
     @override
     async def __aenter__(self) -> ThreadedAsyncGenerator[YieldT, SendT]:
         self._loop = asyncio.get_running_loop()
-        self._stream_future = self._loop.run_in_executor(self._executor, self.__stream)
+        self._stream_future = self._loop.run_in_executor(
+            self._executor, self.__stream_threadsafe
+        )
         return self
 
     @override
@@ -175,7 +177,8 @@ class ThreadedAsyncGenerator(
             raise __typ
         return self._generator.throw(__typ, __val, __tb)
 
-    def __stream(self) -> None:
+    def __stream_threadsafe(self) -> None:
+        """Stream the synchronous itertor to the queue and notify the async thread."""
         try:
             while not self._done_event.is_set():
                 sent = self._send_queue.get()
