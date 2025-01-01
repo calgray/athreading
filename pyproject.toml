@@ -9,6 +9,8 @@ description = "Asynchronous threading package for Python"
 readme = "README.md"
 authors = ["Callan Gray <cal.j.gray@gmail.com>"]
 license = "BSD-3-Clause"
+homepage = "https://github.com/calgray/athreading"
+repository = "https://github.com/calgray/athreading.git"
 packages = [{ include = "athreading", from = "src" }]
 
 [tool.poetry.dependencies]
