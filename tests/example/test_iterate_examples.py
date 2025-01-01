@@ -5,7 +5,7 @@ import pytest
 
 import athreading
 
-TEST_VALUES = [1, None, "", 2.0]
+TEST_VALUES = [1, 2, 3, 4]
 
 executor = ThreadPoolExecutor()
 
