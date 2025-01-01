@@ -54,3 +54,24 @@ jobs:
       uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+
+  benchmark:
+    needs: qa
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: 3.13
+
+    - name: Install Poetry
+      uses: abatilo/actions-poetry@v3.0.1
+      with:
+        poetry-version: 1.2.2
+
+    - name: Install dependencies
+      run: poetry install
+
+    - name: Run tests
+      run: poetry run pytest --benchmark-only
