@@ -4,7 +4,7 @@
 [![PyPI version shields.io](https://img.shields.io/pypi/v/athreading.svg)](https://pypi.python.org/pypi/athreading)
 [![PyPI pyversions](https://img.shields.io/pypi/pyversions/athreading.svg)](https://pypi.python.org/pypi/athreading)
 
-`athreading` is a Python library that allows you to run synchronous I/O functions asynchronously using `asyncio`. It provides decorators to adapt synchronous functions and generators, enabling them to operate without blocking the event loop.
+`athreading` is a Python library that allows you to run synchronous I/O functions asynchronously using `asyncio` via background threads. It provides decorators to adapt synchronous functions and generators, enabling them to operate without blocking the event loop.
 
 ## Features
 
@@ -41,7 +41,7 @@ def compute_sqrt(x):
     time.sleep(0.5)  # Simulate a blocking I/O operation
     return math.sqrt(x)
 
-async def main():
+async def amain():
     results = await asyncio.gather(
         compute_sqrt(2),
         compute_sqrt(3),
@@ -49,12 +49,12 @@ async def main():
     )
     print(results)
 
-asyncio.run(main())
+asyncio.run(amain())
 ```
 
 In this example, `compute_sqrt` is a synchronous function that sleeps for 0.5 seconds to simulate a blocking I/O operation. By decorating it with `@athreading.call`, it can be awaited within an asynchronous context, allowing multiple calls to run concurrently without blocking the event loop.
 
-## 2. Converting a Synchronous Iterator
+### 2. Converting a Synchronous Iterator
 
 The `@athreading.iterate` decorator transforms a synchronous iterator into an asynchronous iterator.
 
@@ -65,19 +65,56 @@ import datetime
 import asyncio
 
 @athreading.iterate
-def time_generator(n):
+def time_generator(n, label):
     for _ in range(n):
         time.sleep(0.5)  # Simulate a blocking I/O operation
-        yield datetime.datetime.now()
+        yield f"{label}: {datetime.datetime.now()}"
 
-async def main():
-    async for current_time in time_generator(3):
-        print(current_time)
+async def amain():
+    async def print_stream(label):
+        async with time_generator(10, label) as stream:
+            async for current_time in stream:
+                print(current_time)
 
-asyncio.run(main())
+    await asyncio.gather(
+        print_stream("Stream 1"),
+        print_stream("Stream 2"),
+        print_stream("Stream 3"),
+    )
+
+asyncio.run(amain())
 ```
 
-Here, `time_generator` is a synchronous generator function that yields the current time after sleeping for 0.5 seconds. By decorating it with `@athreading.iterate`, it becomes an asynchronous generator that can be iterated over without blocking the event loop.
+This example demonstrates running three asynchronous streams concurrently. Each stream processes the `time_generator` function independently, and the decorator ensures iteration occurs without blocking the event loop.
+
+### 3. Converting a Synchronous Generator
+
+The `@athreading.generate` decorator converts a synchronous generator function into an asynchronous generator function that supports `asend`.
+
+```python
+import athreading
+import time
+import asyncio
+
+@athreading.generate
+def controlled_counter(start, step):
+    current = start
+    while True:
+        time.sleep(0.5)  # Simulate a blocking I/O operation
+        received = yield current
+        current = received if received is not None else current + step
+
+async def amain():
+    async with controlled_counter(0, 1) as async_gen:
+        print(await async_gen.asend(None))  # Start the generator
+        print(await async_gen.asend(None))  # Advance with default step
+        print(await async_gen.asend(10))   # Send a new value to control the counter
+        print(await async_gen.asend(None))  # Continue from the new value
+
+asyncio.run(amain())
+```
+
+This example demonstrates how `@athreading.generate` transforms a synchronous generator into an asynchronous generator. The `asend` method sends values to control the generator's state dynamically, enabling interactive workflows while avoiding blocking the event loop.
 
 ## Maintenance
 
