@@ -1,5 +1,11 @@
 # Version History
 
+## 0.2.1
+
+## Changed
+
+* Updated release workflow process.
+
 ## 0.2.0
 
 ### Added<!--0.2.0-->
