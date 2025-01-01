@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "athreading"
-version = "0.1.2"
+version = "0.2.0"
 description = "Asynchronous threading package for Python"
 readme = "README.md"
 authors = ["Callan Gray <cal.j.gray@gmail.com>"]
@@ -71,6 +71,7 @@ profile = "black"
 [tool.pytest.ini_options]
 addopts = [
     "-v",
+    "--mypy",
     "-p",
     "no:warnings",
     "--cov=athreading",
