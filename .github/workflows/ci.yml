@@ -1,6 +1,6 @@
 name: Test and build
 
-on: [push, pull_request, workflow_call]
+on: [push, workflow_call]
 
 jobs:
   qa:
@@ -26,7 +26,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ windows-latest, ubuntu-latest, macos-latest ]
-        python-version: [ "3.11", "3.12" ]
+        python-version: [ "3.9", "3.11", "3.13" ]
 
     steps:
     - uses: actions/checkout@v4
