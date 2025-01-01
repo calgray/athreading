@@ -1,3 +1,4 @@
+# mypy: disable-error-code="operator, arg-type"
 import asyncio
 import time
 
