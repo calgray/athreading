@@ -69,4 +69,13 @@ docstring-convention = 'google'
 profile = "black"
 
 [tool.pytest.ini_options]
-addopts = "-v --mypy -p no:warnings --cov=athreading --cov-report=html --doctest-modules --ignore=athreading/__main__.py"
+addopts = [
+    "-v",
+    "-p",
+    "no:warnings",
+    "--cov=athreading",
+    "--cov-report=html",
+    "--doctest-modules",
+    "--benchmark-disable",
+    "--ignore=athreading/__main__.py"
+]
