@@ -1,19 +1,24 @@
 """Iterator utilities."""
 
-
 from __future__ import annotations
 
 import asyncio
 import functools
 import queue
+import sys
 import threading
-from collections.abc import AsyncIterator, Callable, Iterator
+from collections.abc import Callable, Iterator
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import AbstractAsyncContextManager
 from types import TracebackType
-from typing import ParamSpec, TypeVar, overload
+from typing import Optional, TypeVar, Union
 
-from typing_extensions import override
+from athreading.type_aliases import AsyncIteratorContext
+
+if sys.version_info[:2] > (3, 11):
+    from typing import ParamSpec, overload, override
+else:
+    from typing_extensions import ParamSpec, overload, override
+
 
 ParamsT = ParamSpec("ParamsT")
 YieldT = TypeVar("YieldT")
@@ -23,34 +28,34 @@ YieldT = TypeVar("YieldT")
 def iterate(
     fn: None = None,
     *,
-    executor: ThreadPoolExecutor | None = None,
+    executor: Optional[ThreadPoolExecutor] = None,
 ) -> Callable[
     [Callable[ParamsT, Iterator[YieldT]]],
-    Callable[ParamsT, ThreadedAsyncIterator[YieldT]],
+    Callable[ParamsT, AsyncIteratorContext[YieldT]],
 ]:
-    pass
+    ...
 
 
 @overload
 def iterate(
     fn: Callable[ParamsT, Iterator[YieldT]],
     *,
-    executor: ThreadPoolExecutor | None = None,
-) -> Callable[ParamsT, ThreadedAsyncIterator[YieldT]]:
-    pass
+    executor: Optional[ThreadPoolExecutor] = None,
+) -> Callable[ParamsT, AsyncIteratorContext[YieldT]]:
+    ...
 
 
 def iterate(
-    fn: Callable[ParamsT, Iterator[YieldT]] | None = None,
+    fn: Optional[Callable[ParamsT, Iterator[YieldT]]] = None,
     *,
-    executor: ThreadPoolExecutor | None = None,
-) -> (
-    Callable[ParamsT, ThreadedAsyncIterator[YieldT]]
-    | Callable[
+    executor: Optional[ThreadPoolExecutor] = None,
+) -> Union[
+    Callable[ParamsT, AsyncIteratorContext[YieldT]],
+    Callable[
         [Callable[ParamsT, Iterator[YieldT]]],
-        Callable[ParamsT, ThreadedAsyncIterator[YieldT]],
-    ]
-):
+        Callable[ParamsT, AsyncIteratorContext[YieldT]],
+    ],
+]:
     """Decorates a thread-safe iterator with a ThreadPoolExecutor and exposes a thread-safe
     AsyncIterator.
 
@@ -60,7 +65,7 @@ def iterate(
         executor (ThreadPoolExecutor, optional): Defaults to None.
 
     Returns:
-        Callable[ParamsT, ThreadedAsyncIterator[YieldT]]: Decorated iterator function with lazy
+        Callable[ParamsT, AsyncIteratorContext[YieldT]]: Decorated iterator function with lazy
         argument evaluation.
     """
     if fn is None:
@@ -70,25 +75,25 @@ def iterate(
         @functools.wraps(fn)
         def wrapper(
             *args: ParamsT.args, **kwargs: ParamsT.kwargs
-        ) -> ThreadedAsyncIterator[YieldT]:
+        ) -> AsyncIteratorContext[YieldT]:
             return ThreadedAsyncIterator(fn(*args, **kwargs), executor=executor)
 
         return wrapper
 
 
 def _create_iterate_decorator(
-    executor: ThreadPoolExecutor | None = None,
+    executor: Optional[ThreadPoolExecutor] = None,
 ) -> Callable[
     [Callable[ParamsT, Iterator[YieldT]]],
-    Callable[ParamsT, ThreadedAsyncIterator[YieldT]],
+    Callable[ParamsT, AsyncIteratorContext[YieldT]],
 ]:
     def decorator(
         fn: Callable[ParamsT, Iterator[YieldT]],
-    ) -> Callable[ParamsT, ThreadedAsyncIterator[YieldT]]:
+    ) -> Callable[ParamsT, AsyncIteratorContext[YieldT]]:
         @functools.wraps(fn)
         def wrapper(
             *args: ParamsT.args, **kwargs: ParamsT.kwargs
-        ) -> ThreadedAsyncIterator[YieldT]:
+        ) -> AsyncIteratorContext[YieldT]:
             return ThreadedAsyncIterator(fn(*args, **kwargs), executor=executor)
 
         return wrapper
@@ -96,42 +101,42 @@ def _create_iterate_decorator(
     return decorator
 
 
-class ThreadedAsyncIterator(
-    AbstractAsyncContextManager["ThreadedAsyncIterator[YieldT]"], AsyncIterator[YieldT]
-):
+class ThreadedAsyncIterator(AsyncIteratorContext[YieldT]):
     """Wraps a synchronous Iterator with a ThreadPoolExecutor and exposes an AsyncIterator."""
 
     def __init__(
         self,
         iterator: Iterator[YieldT],
-        executor: ThreadPoolExecutor | None = None,
+        executor: Optional[ThreadPoolExecutor] = None,
     ):
         """Initilizes a ThreadedAsyncIterator from a synchronous iterator.
 
         Args:
             iterator (Iterator[YieldT]): Synchronous iterator or iterable.
             executor (ThreadPoolExecutor, optional): Shared thread pool instance. Defaults to
-            asyncio ThreadPoolExecutor().
+            ThreadPoolExecutor().
         """
         self._yield_semaphore = asyncio.Semaphore(0)
         self._done_event = threading.Event()
         self._queue: queue.Queue[YieldT] = queue.Queue()
         self._iterator = iterator
         self._executor = executor
-        self._stream_future: asyncio.Future[None] | None = None
+        self._stream_future: Optional[asyncio.Future[None]] = None
 
     @override
     async def __aenter__(self) -> ThreadedAsyncIterator[YieldT]:
         self._loop = asyncio.get_running_loop()
-        self._stream_future = self._loop.run_in_executor(self._executor, self.__stream)
+        self._stream_future = self._loop.run_in_executor(
+            self._executor, self.__stream_threadsafe
+        )
         return self
 
     @override
     async def __aexit__(
         self,
-        __exc_type: type[BaseException] | None,
-        __val: BaseException | None,
-        __tb: TracebackType | None,
+        __exc_type: Optional[type[BaseException]],
+        __val: Optional[BaseException],
+        __tb: Optional[TracebackType],
     ) -> None:
         assert self._stream_future is not None
         self._done_event.set()
@@ -148,7 +153,8 @@ class ThreadedAsyncIterator(
                 return self._queue.get(False)
         raise StopAsyncIteration
 
-    def __stream(self) -> None:
+    def __stream_threadsafe(self) -> None:
+        """Stream the synchronous itertor to the queue and notify the async thread."""
         try:
             for item in self._iterator:
                 self._queue.put(item)
