@@ -114,7 +114,7 @@ class ThreadedAsyncIterator(AsyncIteratorContext[YieldT]):
         Args:
             iterator (Iterator[YieldT]): Synchronous iterator or iterable.
             executor (ThreadPoolExecutor, optional): Shared thread pool instance. Defaults to
-            asyncio ThreadPoolExecutor().
+            ThreadPoolExecutor().
         """
         self._yield_semaphore = asyncio.Semaphore(0)
         self._done_event = threading.Event()
@@ -126,7 +126,9 @@ class ThreadedAsyncIterator(AsyncIteratorContext[YieldT]):
     @override
     async def __aenter__(self) -> ThreadedAsyncIterator[YieldT]:
         self._loop = asyncio.get_running_loop()
-        self._stream_future = self._loop.run_in_executor(self._executor, self.__stream)
+        self._stream_future = self._loop.run_in_executor(
+            self._executor, self.__stream_threadsafe
+        )
         return self
 
     @override
@@ -151,7 +153,8 @@ class ThreadedAsyncIterator(AsyncIteratorContext[YieldT]):
                 return self._queue.get(False)
         raise StopAsyncIteration
 
-    def __stream(self) -> None:
+    def __stream_threadsafe(self) -> None:
+        """Stream the synchronous itertor to the queue and notify the async thread."""
         try:
             for item in self._iterator:
                 self._queue.put(item)
