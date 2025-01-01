@@ -36,7 +36,8 @@ def test_call_athreading_benchmark(benchmark):
 
 @pytest.mark.benchmark(group="call", disable_gc=True, warmup=False)
 def test_call_threaded_benchmark(benchmark):
-    async def atask():
-        return await asyncio.wrap_future(threaded_asquare(2, 0.0))
+    def test():
+        async def atest():
+            return await asyncio.wrap_future(threaded_asquare(2, 0.0))
 
-    assert 4 == benchmark(lambda: asyncio.run(atask()))
+    assert 4 == benchmark(test())
