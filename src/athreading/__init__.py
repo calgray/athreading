@@ -5,7 +5,7 @@ from .generator import ThreadedAsyncGenerator, generate
 from .iterator import ThreadedAsyncIterator, iterate
 from .type_aliases import AsyncGeneratorContext, AsyncIteratorContext
 
-__version__ = "0.1.2"
+__version__ = "0.2.0"
 
 
 __all__ = (
