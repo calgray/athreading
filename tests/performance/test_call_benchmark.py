@@ -1,12 +1,9 @@
 import asyncio
 import time
 
-import pytest
 import threaded
 
 import athreading
-
-# pyinstument
 
 threadpool = threaded.ThreadPooled()
 threadpool.configure(4)
@@ -29,17 +26,24 @@ def threaded_asquare(x: float, delay: float = 0.0):
 
 
 def test_athreading_benchmark(benchmark):
-    def main():
+    def test():
         return asyncio.run(athreading_asquare(2, 0.0))
 
-    assert 4 == benchmark(main)
+    assert 4 == benchmark(test)
+
+
+def test_to_thread_benchmark(benchmark):
+    def test():
+        return asyncio.run(asyncio.to_thread(square, 2, 0.0))
+
+    assert 4 == benchmark(test)
 
 
 def test_threaded_benchmark(benchmark):
-    def main():
-        async def amain():
+    def test():
+        async def atest():
             return await asyncio.wrap_future(threaded_asquare(2, 0.0))
 
-        return asyncio.run(amain())
+        return asyncio.run(atest())
 
-    assert 4 == benchmark(main)
+    assert 4 == benchmark(test)
