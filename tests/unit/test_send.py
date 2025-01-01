@@ -1,12 +1,17 @@
 import asyncio
+import sys
 import time
 from collections.abc import AsyncGenerator, Generator
-from contextlib import nullcontext
 from typing import Optional
 
 import pytest
 
 import athreading
+
+if sys.version_info[:2] > (3, 9):
+    from contextlib import nullcontext
+else:
+    from tests.compat import nullcontext
 
 
 def doubler(delay: float) -> Generator[int, Optional[int], None]:
