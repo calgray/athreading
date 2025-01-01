@@ -5,7 +5,8 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry]
 name = "athreading"
 version = "0.2.0"
-description = ""
+description = "Asynchronous threading package for Python"
+readme = "README.md"
 authors = ["Callan Gray <cal.j.gray@gmail.com>"]
 license = "BSD-3-Clause"
 packages = [{ include = "athreading", from = "src" }]
@@ -15,19 +16,20 @@ python = "^3.9"
 
 [tool.poetry.group.test.dependencies]
 pytest = ">=7,<9"
-pytest-cov = "^4.0.0"
+pytest-cov = ">=4,<7"
 pytest-mypy = "^0.10.0"
-pytest-mock = "^3.7.0"
-pytest-asyncio = "^0.20.3"
-pytest-benchmark = "^4.0.0"
+pytest-mock = "^3.14.0"
+pytest-asyncio = ">=0.20.3,<0.26.0"
+pytest-benchmark = "^5.1.0"
 isort = "^5.10.1"
-pre-commit = "^3.0.4"
+pre-commit = ">=3.0.4,<5.0.0"
 black = ">=23.1,<25.0"
 flake8 = ">=6,<8"
 flake8-docstrings = "^1.6.0"
 flake8-pyproject = "^1.2.2"
-aiostream = ">=0.4.5,<0.6.0"
+aiostream = ">=0.4.5,<0.7.0"
 threaded = "^4.2.0"
+typing_extensions = { python = "3.13", version = ">4.12.0" }
 
 [tool.mypy]
 disallow_any_explicit = true
@@ -67,4 +69,14 @@ docstring-convention = 'google'
 profile = "black"
 
 [tool.pytest.ini_options]
-addopts = "-v --mypy -p no:warnings --cov=athreading --cov-report=html --doctest-modules --ignore=athreading/__main__.py"
+addopts = [
+    "-v",
+    "--mypy",
+    "-p",
+    "no:warnings",
+    "--cov=athreading",
+    "--cov-report=html",
+    "--doctest-modules",
+    "--benchmark-disable",
+    "--ignore=athreading/__main__.py"
+]
