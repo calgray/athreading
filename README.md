@@ -1,10 +1,14 @@
 # athreading
 
 [![Test and build](https://github.com/calgray/athreading/actions/workflows/ci.yml/badge.svg)](https://github.com/calgray/athreading/actions/workflows/ci.yml)
-[![Codecov](https://codecov.io/gh/calgray/athreading/branch/main/graph/badge.svg)](https://app.codecov.io/github/calgray/athreading)
 [![PyPI version](https://img.shields.io/pypi/v/athreading.svg)](https://pypi.python.org/pypi/athreading)
 [![PyPI python versions](https://img.shields.io/pypi/pyversions/athreading.svg?style=flat&logo=python&logoColor=white)](https://pypi.python.org/pypi/athreading)
 [![License](https://img.shields.io/badge/license-BSD_3--clause-blue.svg)](https://opensource.org/license/bsd-3-clause/)
+[![Codecov](https://codecov.io/gh/calgray/athreading/branch/main/graph/badge.svg)](https://app.codecov.io/github/calgray/athreading)
+
+[![Code style](https://img.shields.io/badge/code_style-black-000000.svg)](https://github.com/psf/black)
+[![Checked with mypy](https://www.mypy-lang.org/static/mypy_badge.svg)](http://mypy-lang.org/)
+[![Pydocstyle](https://img.shields.io/badge/pydocstyle-enabled-AD4CD3)](http://www.pydocstyle.org/en/stable/)
 
 `athreading` is a Python library that allows you to run synchronous I/O functions asynchronously using `asyncio` via background threads. It provides decorators to adapt synchronous functions and generators, enabling them to operate without blocking the event loop.
 
