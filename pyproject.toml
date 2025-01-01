@@ -71,7 +71,6 @@ profile = "black"
 [tool.pytest.ini_options]
 addopts = [
     "-v",
-    "--mypy",
     "-p",
     "no:warnings",
     "--cov=athreading",
