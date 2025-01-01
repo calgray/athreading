@@ -1,5 +1,6 @@
 import time
 from collections.abc import AsyncGenerator, Generator
+from contextlib import nullcontext
 from typing import Optional
 
 import pytest
@@ -30,7 +31,7 @@ async def agenerate_infinite(delay: float) -> AsyncGenerator[int, Optional[int]]
 @pytest.mark.parametrize(
     "streamcontext",
     [
-        lambda delay: agenerate_infinite(delay),
+        lambda delay: nullcontext(agenerate_infinite(delay)),
         lambda delay: athreading.generate(generate_infinite)(delay),
     ],
     ids=["control", "generate"],
@@ -52,7 +53,7 @@ async def test_throw_immediate(streamcontext, worker_delay, main_delay):
 @pytest.mark.parametrize(
     "streamcontext",
     [
-        lambda delay: agenerate_infinite(delay),
+        lambda delay: nullcontext(agenerate_infinite(delay)),
         lambda delay: athreading.generate(generate_infinite)(delay),
     ],
     ids=["control", "generate"],

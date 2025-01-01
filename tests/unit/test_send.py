@@ -1,6 +1,7 @@
 import asyncio
 import time
 from collections.abc import AsyncGenerator, Generator
+from contextlib import nullcontext
 from typing import Optional
 
 import pytest
@@ -41,7 +42,7 @@ async def adoubler(delay: float) -> AsyncGenerator[int, Optional[int]]:
 @pytest.mark.parametrize(
     "streamcontext",
     [
-        lambda delay: adoubler(delay),
+        lambda delay: nullcontext(adoubler(delay)),
         lambda delay: athreading.generate(doubler)(delay),
     ],
     ids=["adoubler", "generate"],
