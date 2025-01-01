@@ -9,7 +9,7 @@
 * Added support for providing explicit background executor to decorators.
 * Added call and iterate benchmarks.
 
-### Changed<!--0.2.0->
+### Changed<!--0.2.0-->
 
 * Changed `call`, `iterate` and `generate` to higher-order-function decorators.
 
