@@ -2,9 +2,16 @@
 
 import asyncio
 import functools
-from collections.abc import Callable, Coroutine
+import sys
+from collections.abc import Coroutine
 from concurrent.futures import ThreadPoolExecutor
-from typing import ParamSpec, TypeVar, overload
+from typing import Callable, Optional, TypeVar, Union, overload
+
+if sys.version_info[:2] > (3, 9):
+    from typing import ParamSpec
+else:
+    from typing_extensions import ParamSpec
+
 
 ParamsT = ParamSpec("ParamsT")
 ReturnT = TypeVar("ReturnT")
@@ -14,30 +21,30 @@ ReturnT = TypeVar("ReturnT")
 def call(
     fn: None = None,
     *,
-    executor: ThreadPoolExecutor | None = None,
+    executor: Optional[ThreadPoolExecutor] = None,
 ) -> Callable[
     [Callable[ParamsT, ReturnT]], Callable[ParamsT, Coroutine[None, None, ReturnT]]
 ]:
-    pass
+    ...
 
 
 @overload
 def call(
     fn: Callable[ParamsT, ReturnT],
 ) -> Callable[ParamsT, Coroutine[None, None, ReturnT]]:
-    pass
+    ...
 
 
 def call(
-    fn: Callable[ParamsT, ReturnT] | None = None,
+    fn: Optional[Callable[ParamsT, ReturnT]] = None,
     *,
-    executor: ThreadPoolExecutor | None = None,
-) -> (
-    Callable[ParamsT, Coroutine[None, None, ReturnT]]
-    | Callable[
+    executor: Optional[ThreadPoolExecutor] = None,
+) -> Union[
+    Callable[ParamsT, Coroutine[None, None, ReturnT]],
+    Callable[
         [Callable[ParamsT, ReturnT]], Callable[ParamsT, Coroutine[None, None, ReturnT]]
-    ]
-):
+    ],
+]:
     """Wraps a thread-safe synchronous Callable with an ThreadPoolExecutor and exposes a
     thread-safe asynchronous Callable.
 
@@ -56,7 +63,7 @@ def call(
 
 
 def _create_call_decorator(
-    executor: ThreadPoolExecutor | None = None,
+    executor: Optional[ThreadPoolExecutor] = None,
 ) -> Callable[
     [Callable[ParamsT, ReturnT]], Callable[ParamsT, Coroutine[None, None, ReturnT]]
 ]:
@@ -71,7 +78,7 @@ def _create_call_decorator(
 def _call(
     fn: Callable[ParamsT, ReturnT],
     *,
-    executor: ThreadPoolExecutor | None = None,
+    executor: Optional[ThreadPoolExecutor] = None,
 ) -> Callable[ParamsT, Coroutine[None, None, ReturnT]]:
     """Wraps a callable to a Coroutine for calling using a ThreadPoolExecutor."""
 

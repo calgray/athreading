@@ -1,6 +1,6 @@
 name: Test and build
 
-on: [push, pull_request, workflow_call]
+on: [push, workflow_call]
 
 jobs:
   qa:
@@ -26,7 +26,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ windows-latest, ubuntu-latest, macos-latest ]
-        python-version: [ "3.11", "3.12" ]
+        python-version: [ "3.9", "3.11", "3.13" ]
 
     steps:
     - uses: actions/checkout@v4
@@ -47,4 +47,31 @@ jobs:
       run: poetry install
 
     - name: Run tests
-      run: poetry run pytest
+      run: poetry run pytest --cov-branch --cov-report=xml
+
+    - name: Upload coverage reports to Codecov
+      if: ${{ (matrix.os == 'ubuntu-latest') && (matrix.python-version == '3.13') }}
+      uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+
+  benchmark:
+    needs: qa
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: 3.13
+
+    - name: Install Poetry
+      uses: abatilo/actions-poetry@v3.0.1
+      with:
+        poetry-version: 1.2.2
+
+    - name: Install dependencies
+      run: poetry install
+
+    - name: Run tests
+      run: poetry run pytest --benchmark-enable --benchmark-only

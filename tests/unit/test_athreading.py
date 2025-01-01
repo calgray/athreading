@@ -1,4 +1,5 @@
 """Tests for the main module."""
+
 from athreading import __version__
 
 
