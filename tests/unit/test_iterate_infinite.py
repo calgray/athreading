@@ -1,8 +1,8 @@
 import asyncio
 import time
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import asynccontextmanager, nullcontext
 
-import aiostream.stream as astream
 import pytest
 
 import athreading
@@ -18,16 +18,31 @@ def generate_infinite(delay=0.0):
         yield item
 
 
+@asynccontextmanager
+async def agenerate_infinite_naive(delay=0.0):
+    stopped = False
+
+    async def agenerator():
+        for value in generate_infinite(delay):
+            yield value
+            if stopped:
+                break
+            await asyncio.sleep(0.0)
+
+    yield agenerator()
+    stopped = True
+
+
 @pytest.mark.parametrize("worker_delay", [0.0, 0.1])
 @pytest.mark.parametrize("main_delay", [0.0, 0.1])
 @pytest.mark.parametrize(
     "streamcontext",
     [
-        lambda delay: astream.iterate(generate_infinite(delay)).stream(),
+        lambda delay: agenerate_infinite_naive(delay),
         lambda delay: athreading.iterate(generate_infinite)(delay),
         lambda delay: athreading.generate(generate_infinite)(delay),
     ],
-    ids=["aiostream", "iterate", "generate"],
+    ids=["naive", "iterate", "generate"],
 )
 @pytest.mark.asyncio
 async def test_iterate_cancel(streamcontext, worker_delay, main_delay):
@@ -46,11 +61,11 @@ async def test_iterate_cancel(streamcontext, worker_delay, main_delay):
 @pytest.mark.parametrize(
     "streamcontext",
     [
-        lambda delay: astream.iterate(generate_infinite(delay)).stream(),
+        lambda delay: nullcontext(agenerate_infinite_naive(delay)),
         lambda delay: athreading.iterate(generate_infinite)(delay),
         lambda delay: athreading.generate(generate_infinite)(delay),
     ],
-    ids=["aiostream", "iterate", "generate"],
+    ids=["naive", "iterate", "generate"],
 )
 @pytest.mark.asyncio
 async def test_iterate_exception(streamcontext, worker_delay, main_delay):
