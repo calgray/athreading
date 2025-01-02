@@ -7,8 +7,8 @@
 [![Codecov](https://codecov.io/gh/calgray/athreading/branch/main/graph/badge.svg)](https://app.codecov.io/github/calgray/athreading)
 
 [![Code style](https://img.shields.io/badge/code_style-black-000000.svg)](https://github.com/psf/black)
-[![Checked with mypy](https://www.mypy-lang.org/static/mypy_badge.svg)](http://mypy-lang.org/)
-[![Pydocstyle](https://img.shields.io/badge/pydocstyle-enabled-AD4CD3)](http://www.pydocstyle.org/en/stable/)
+[![Checked with mypy](https://www.mypy-lang.org/static/mypy_badge.svg)](https://mypy-lang.org/)
+[![Pydocstyle](https://img.shields.io/badge/flake8-enabled-blue.svg)](https://flake8.pycqa.org/en/latest/)
 
 `athreading` is a Python library that allows you to run synchronous I/O functions asynchronously using `asyncio` via background threads. It provides decorators to adapt synchronous functions and generators, enabling them to operate without blocking the event loop.
 
@@ -121,46 +121,6 @@ asyncio.run(amain())
 ```
 
 This example demonstrates how `@athreading.generate` transforms a synchronous generator into an asynchronous generator. The `asend` method sends values to control the generator's state dynamically, enabling interactive workflows while avoiding blocking the event loop.
-
-## Maintenance
-
-This is a minimal Python library that uses [poetry](https://python-poetry.org) for packaging and dependency management. It also provides [pre-commit](https://pre-commit.com/) hooks (for [isort](https://pycqa.github.io/isort/), [Black](https://black.readthedocs.io/en/stable/), [Flake8](https://flake8.pycqa.org/en/latest/) and [mypy](https://mypy.readthedocs.io/en/stable/)) and automated tests using [pytest](https://pytest.org/) and [GitHub Actions](https://github.com/features/actions). Pre-commit hooks are automatically kept updated with a dedicated GitHub Action, this can be removed and replace with [pre-commit.ci](https://pre-commit.ci) if using an public repo. It was developed by the [Imperial College Research Computing Service](https://www.imperial.ac.uk/admin-services/ict/self-service/research-support/rcs/).
-
-### Testing
-
-To modify, test and request changes to this repository:
-
-1. [Download and install Poetry](https://python-poetry.org/docs/#installation) following the instructions for the target OS.
-2. Clone `git@github.com:calgray/athreading.git` and make it the working directory.
-3. Set up the virtual environment:
-
-   ```bash
-   poetry install
-   ```
-
-4. Activate the virtual environment (alternatively, ensure any python-related command is preceded by `poetry run`):
-
-   ```bash
-   poetry shell
-   ```
-
-5. Install the git hooks:
-
-   ```bash
-   pre-commit install
-   ```
-
-6. Run the tests:
-
-   ```bash
-   pytest
-   ```
-
-### Publishing
-
-The GitHub workflow includes an action to publish on release.
-
-To run this action, uncomment the commented portion of `publish.yml`, and modify the steps for the desired behaviour (ie. publishing a Docker image, publishing to PyPI, deploying documentation etc.)
 
 ## License
 
