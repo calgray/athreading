@@ -2,7 +2,6 @@ import asyncio
 import time
 from collections.abc import Iterable
 
-import aiostream
 import pytest
 import threaded
 
@@ -24,13 +23,19 @@ def square_iterate(iterator: Iterable[float], delay: float = 0.0):
         yield square(item)
 
 
+async def asquare_iterate_naive(iterator: Iterable[float], delay: float = 0.0):
+    for value in square_iterate(iterator, delay):
+        yield value
+        await asyncio.sleep(0.0)
+
+
+async def asquare_list_naive(length: int):
+    return [v async for v in asquare_iterate_naive(range(length), 0.001)]
+
+
 @athreading.iterate(executor=executor)
 def asquare_iterate_athreading(values: Iterable[float], delay: float = 0.0):
     yield from square_iterate(values, delay)
-
-
-def asquare_iterate_aiostream(iterator: Iterable[float], delay: float = 0.0):
-    return aiostream.stream.iterate(square_iterate(iterator, delay)).stream()
 
 
 async def asquare_list_athreading(length: int):
@@ -38,12 +43,8 @@ async def asquare_list_athreading(length: int):
         return [v async for v in it]
 
 
-async def asquare_list_aiostream(length: int):
-    return await aiostream.stream.list(asquare_iterate_aiostream(range(length), 0.001))
-
-
 @pytest.mark.benchmark(group="iterate", disable_gc=True, warmup=False)
-@pytest.mark.parametrize("impl", [asquare_list_athreading, asquare_list_aiostream])
+@pytest.mark.parametrize("impl", [asquare_list_naive, asquare_list_athreading])
 @pytest.mark.parametrize("stream_length", [100])
 @pytest.mark.parametrize("num_streams", [1, 4, 16])
 def test_iterate_benchmark(benchmark, impl, num_streams: int, stream_length: int):
