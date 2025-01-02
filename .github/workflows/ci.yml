@@ -1,7 +1,5 @@
-name: Test and build
-
+name: test
 on: [push, workflow_call]
-
 jobs:
   qa:
     runs-on: ubuntu-latest
