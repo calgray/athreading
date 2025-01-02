@@ -2,9 +2,15 @@
 
 ## 0.2.1
 
+## Added
+
+* Added contributing document.
+
 ## Changed
 
 * Updated release workflow process.
+* Updated Readme
+* Test dependencies audited.
 
 ## 0.2.0
 
