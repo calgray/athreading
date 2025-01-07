@@ -1,3 +1,4 @@
+
 # Version History
 
 ## 0.2.1
@@ -5,6 +6,7 @@
 ## Added
 
 * Added contributing document.
+* Added code of conduct.
 
 ## Changed
 
