@@ -7,7 +7,7 @@ import pytest
 
 import athreading
 
-if sys.version_info[:2] > (3, 9):
+if sys.version_info > (3, 10):
     from contextlib import nullcontext
 else:
     from tests.compat import nullcontext

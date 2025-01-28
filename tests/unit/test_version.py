@@ -2,11 +2,11 @@
 
 from importlib.metadata import version
 
-from athreading import __version__
+import athreading
 
-PACKAGE_VER = version("athreading")
+PACKAGE_VER = version(athreading.__name__)
 
 
 def test_module_version():
     """Check that the module and package versions match."""
-    assert __version__ == PACKAGE_VER
+    assert athreading.__version__ == PACKAGE_VER

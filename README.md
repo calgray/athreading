@@ -4,7 +4,7 @@
 [![PyPI version](https://img.shields.io/pypi/v/athreading.svg)](https://pypi.python.org/pypi/athreading)
 [![PyPI python versions](https://img.shields.io/pypi/pyversions/athreading.svg?style=flat&logo=python&logoColor=white)](https://pypi.python.org/pypi/athreading)
 [![License](https://img.shields.io/badge/license-BSD_3--Clause-blue.svg)](https://opensource.org/license/bsd-3-clause/)
-[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](code_of_conduct.md)
+[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md)
 
 [![Code style](https://img.shields.io/badge/code_style-black-000000.svg)](https://github.com/psf/black)
 [![Checked with mypy](https://www.mypy-lang.org/static/mypy_badge.svg)](https://mypy-lang.org/)

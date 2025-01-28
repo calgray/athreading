@@ -8,7 +8,7 @@ from time import sleep
 from types import TracebackType
 from typing import Callable, Optional, Union
 
-if sys.version_info[:2] > (3, 11):
+if sys.version_info > (3, 12):
     from typing import override
 else:
     from typing_extensions import override
