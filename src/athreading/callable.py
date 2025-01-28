@@ -7,9 +7,9 @@ from collections.abc import Coroutine
 from concurrent.futures import ThreadPoolExecutor
 from typing import Callable, Optional, TypeVar, Union, overload
 
-if sys.version_info[:2] > (3, 9):
+if sys.version_info > (3, 10):
     from typing import ParamSpec
-else:
+else:  # pragma: not covered
     from typing_extensions import ParamSpec
 
 
