@@ -1,12 +1,16 @@
 import asyncio
+import functools
 import sys
 import time
-from collections.abc import AsyncGenerator, Generator
+from collections.abc import AsyncGenerator
 from concurrent.futures import ThreadPoolExecutor
+from queue import Queue
+from typing import Callable
 
 import pytest
 
 import athreading
+from athreading.callback_iterator import CallbackThreadedAsyncIterator
 
 if sys.version_info > (3, 10):
     from contextlib import nullcontext
@@ -14,52 +18,43 @@ else:
     from tests.compat import nullcontext
 
 TestData = int | str | float | None
-TEST_VALUES: list[TestData] = [1, None, "", 2.0]
+TEST_VALUES = [1, None, "", 2.0]
 
 custom_executor = ThreadPoolExecutor()
 
 
-def generator(delay=0.0, repeats=1) -> Generator[TestData, None, None]:
+def iterate_with_callback(
+    callback: Callable[[TestData], None], delay=0.0, repeats=1
+) -> None:
     for _ in range(repeats):
         for item in TEST_VALUES:
             time.sleep(delay)
-            yield item
+            callback(item)
 
 
 async def agenerate_naive(delay=0.0, repeats=1) -> AsyncGenerator[TestData, None]:
-    for value in generator(delay, repeats):
-        yield value
+    """Naive conversion to async generator. Generator blocks the
+    io loop resulting in poor performance."""
+    q = Queue[TestData]()
+    iterate_with_callback(q.put, delay, repeats)
+    while not q.empty():
+        yield q.get()
         await asyncio.sleep(0.0)
 
 
-@athreading.iterate(executor=custom_executor)
-def aiterate(delay=0.0, repeats=1):
-    yield from generator(delay, repeats)
+@athreading.iterate_callback(executor=custom_executor)
+def aiterate(callback, delay=0.0, repeats=1):
+    iterate_with_callback(callback, delay, repeats)
 
 
-@athreading.iterate()
-def aiterate_simpler(delay=0.0, repeats=1):
-    yield from generator(delay, repeats)
+@athreading.iterate_callback()
+def aiterate_simpler(callback, delay=0.0, repeats=1):
+    iterate_with_callback(callback, delay, repeats)
 
 
-@athreading.iterate
-def aiterate_simplest(delay=0.0, repeats=1):
-    yield from generator(delay, repeats)
-
-
-@athreading.generate(executor=custom_executor)
-def agenerate(delay=0.0, repeats=1):
-    yield from generator(delay, repeats)
-
-
-@athreading.generate()
-def agenerate_simpler(delay=0.0, repeats=1):
-    yield from generator(delay, repeats)
-
-
-@athreading.generate
-def agenerate_simplest(delay=0.0, repeats=1):
-    yield from generator(delay, repeats)
+@athreading.iterate_callback
+def aiterate_simplest(callback, delay=0.0, repeats=1):
+    iterate_with_callback(callback, delay, repeats)
 
 
 @pytest.mark.parametrize("worker_delay", [0.0, 0.1])
@@ -68,29 +63,25 @@ def agenerate_simplest(delay=0.0, repeats=1):
     "streamcontext",
     [
         lambda delay: nullcontext(agenerate_naive(delay)),
-        lambda delay: athreading.iterate(generator)(delay),
+        lambda delay: CallbackThreadedAsyncIterator(
+            functools.partial(iterate_with_callback, delay=delay)
+        ),
+        lambda delay: athreading.iterate_callback(iterate_with_callback)(delay),
         lambda delay: aiterate(delay),
         lambda delay: aiterate_simpler(delay),
         lambda delay: aiterate_simplest(delay),
-        lambda delay: athreading.generate(generator)(delay),
-        lambda delay: agenerate(delay),
-        lambda delay: agenerate_simpler(delay),
-        lambda delay: agenerate_simplest(delay),
     ],
     ids=[
         "naive",
+        "iterator_constructor",
         "iterate",
         "aiterate",
         "aiterate_simpler",
         "aiterate_simplest",
-        "generate",
-        "agenerate",
-        "agenerate_simpler",
-        "agenerate_simplest",
     ],
 )
 @pytest.mark.asyncio
-async def test_iterate_all(streamcontext, worker_delay, main_delay):
+async def test_callback_iterate_all(streamcontext, worker_delay, main_delay):
     output = []
     async with streamcontext(worker_delay) as stream:
         async for v in stream:
@@ -103,15 +94,20 @@ async def test_iterate_all(streamcontext, worker_delay, main_delay):
 @pytest.mark.parametrize(
     "streamcontext",
     [
-        lambda delay, e: athreading.iterate(generator, executor=e)(delay),
-        lambda delay, e: athreading.iterate(executor=e)(generator)(delay),
-        lambda delay, e: athreading.generate(generator, executor=e)(delay),
-        lambda delay, e: athreading.generate(executor=e)(generator)(delay),
+        lambda delay, e: CallbackThreadedAsyncIterator(
+            functools.partial(iterate_with_callback, delay=delay)
+        ),
+        lambda delay, e: athreading.iterate_callback(iterate_with_callback, executor=e)(
+            delay=delay
+        ),
+        lambda delay, e: athreading.iterate_callback(executor=e)(iterate_with_callback)(
+            delay=delay
+        ),
     ],
-    ids=["iterate", "iterate2", "generate", "generate2"],
+    ids=["iterator_constructor", "iterate", "iterate_lazy"],
 )
 @pytest.mark.asyncio
-async def test_iterate_all_parallel(streamcontext):
+async def test_callback_iterate_all_parallel(streamcontext):
     max_workers = 8
     worker_delay = 1.0
     executor = ThreadPoolExecutor(max_workers=max_workers)

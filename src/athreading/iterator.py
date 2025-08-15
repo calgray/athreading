@@ -12,7 +12,7 @@ from concurrent.futures import ThreadPoolExecutor
 from types import TracebackType
 from typing import Optional, TypeVar, Union
 
-from athreading.type_aliases import AsyncIteratorContext
+from athreading.aliases import AsyncIteratorContext
 
 if sys.version_info > (3, 12):
     from typing import ParamSpec, overload, override
@@ -102,7 +102,7 @@ def _create_iterate_decorator(
 
 
 class ThreadedAsyncIterator(AsyncIteratorContext[YieldT]):
-    """Wraps a synchronous Iterator with a ThreadPoolExecutor and exposes an AsyncIterator."""
+    """Wraps a synchronous iterator with an executor and exposes an AsyncIteratorContext."""
 
     def __init__(
         self,
@@ -112,9 +112,8 @@ class ThreadedAsyncIterator(AsyncIteratorContext[YieldT]):
         """Initilizes a ThreadedAsyncIterator from a synchronous iterator.
 
         Args:
-            iterator (Iterator[YieldT]): Synchronous iterator or iterable.
-            executor (ThreadPoolExecutor, optional): Shared thread pool instance. Defaults to
-            ThreadPoolExecutor().
+            iterator: Synchronous iterator or iterable.
+            executor: Shared thread pool instance. Defaults to ThreadPoolExecutor().
         """
         self._yield_semaphore = asyncio.Semaphore(0)
         self._done_event = threading.Event()
