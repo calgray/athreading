@@ -15,9 +15,9 @@
 
 ## Features
 
-- **`@athreading.call`**: Converts a synchronous function into an asynchronous function.
-- **`@athreading.iterate`**: Converts a synchronous iterator into an asynchronous iterator.
-- **`@athreading.generate`**: Converts a synchronous generator into an asynchronous generator.
+- **`@athreading.call`**: Adapts a synchronous function into an asynchronous function.
+- **`@athreading.iterate`**: Adapts a synchronous iterator **(pull-based stream)** into an asynchronous iterator.
+- **`@athreading.generate`**: Adapts a synchronous generator **(push-and-pull-based stream)** into an asynchronous generator.
 
 *Note*: Due to Python's Global Interpreter Lock (GIL), this library does not provide multi-threaded CPU parallelism unless using Python 3.9 with `nogil` or Python 3.13 with free threading enabled.
 
@@ -33,92 +33,101 @@ pip install athreading
 
 `athreading` enables running synchronous functions and iterators asynchronously using `asyncio`.
 
-### 1. Converting a Synchronous Function
+### 1. Adapt a synchronous function
 
-The `@athreading.call` decorator to convert a synchronous function into an asynchronous function.
+The `@athreading.call` decorator transforms a synchronous function into an asynchronous function.
 
 ```python
-import athreading
-import time
-import math
-import asyncio
+>>> import athreading
+>>> import time
+>>> import math
+>>> import asyncio
+>>>
+>>> @athreading.call
+... def compute_sqrt(x):
+...     time.sleep(0.05)  # Simulate a blocking I/O operation
+...     return math.sqrt(x)
+...
+>>> async def amain():
+...     results = await asyncio.gather(
+...         compute_sqrt(2),
+...         compute_sqrt(3),
+...         compute_sqrt(4)
+...     )
+...     print(results)
 
-@athreading.call
-def compute_sqrt(x):
-    time.sleep(0.5)  # Simulate a blocking I/O operation
-    return math.sqrt(x)
+>>> asyncio.run(amain())
+[1.4142135623730951, 1.7320508075688772, 2.0]
 
-async def amain():
-    results = await asyncio.gather(
-        compute_sqrt(2),
-        compute_sqrt(3),
-        compute_sqrt(4)
-    )
-    print(results)
-
-asyncio.run(amain())
 ```
 
 In this example, `compute_sqrt` is a synchronous function that sleeps for 0.5 seconds to simulate a blocking I/O operation. By decorating it with `@athreading.call`, it can be awaited within an asynchronous context, allowing multiple calls to run concurrently without blocking the event loop.
 
-### 2. Converting a Synchronous Iterator
+### 2. Adapt a synchronous iterator (pull-based stream)
 
 The `@athreading.iterate` decorator transforms a synchronous iterator into an asynchronous iterator.
 
 ```python
-import athreading
-import time
-import datetime
-import asyncio
+>>> import athreading
+>>> import time
+>>> import datetime
+>>> import asyncio
+>>>
+>>> @athreading.iterate
+... def time_generator(n):
+...     for _ in range(n):
+...         time.sleep(0.05)  # Simulate a blocking I/O operation
+...         yield datetime.datetime.now()
+...
+>>> async def print_stream(label):
+...     async with time_generator(10) as stream:
+...         async for current_time in stream:
+...             print(f"{label}: {current_time}")
+...
+>>> async def amain():
+...     await asyncio.gather(
+...         print_stream("Stream 1"),
+...         print_stream("Stream 2"),
+...         print_stream("Stream 3"),
+...     )
+...
+>>> asyncio.run(amain())  # doctest: +ELLIPSIS
+Stream ...
 
-@athreading.iterate
-def time_generator(n, label):
-    for _ in range(n):
-        time.sleep(0.5)  # Simulate a blocking I/O operation
-        yield f"{label}: {datetime.datetime.now()}"
-
-async def amain():
-    async def print_stream(label):
-        async with time_generator(10, label) as stream:
-            async for current_time in stream:
-                print(current_time)
-
-    await asyncio.gather(
-        print_stream("Stream 1"),
-        print_stream("Stream 2"),
-        print_stream("Stream 3"),
-    )
-
-asyncio.run(amain())
 ```
 
 This example demonstrates running three asynchronous streams concurrently. Each stream processes the `time_generator` function independently, and the decorator ensures iteration occurs without blocking the event loop.
 
-### 3. Converting a Synchronous Generator
+### 3. Adapt a synchronous generator (driveable push-based stream)
 
 The `@athreading.generate` decorator converts a synchronous generator function into an asynchronous generator function that supports `asend`.
 
 ```python
-import athreading
-import time
-import asyncio
+>>> import athreading
+>>> import time
+>>> import asyncio
+>>> 
+>>> @athreading.generate
+... def controlled_counter(start, step):
+...     current = start
+...     while True:
+...         time.sleep(0.5)  # Simulate a blocking I/O operation
+...         received = yield current
+...         current = received if received is not None else current + step
+...
+>>> async def amain():
+...     async with controlled_counter(0, 1) as async_gen:
+...         print(await async_gen.asend(None))  # Start the generator
+...         print(await async_gen.asend(None))  # Advance with default step
+...         print(await async_gen.asend(10))   # Send a new value to control the counter
+...         print(await async_gen.asend(None))  # Continue from the new value
+...
+>>> asyncio.run(amain())
+0
+1
+10
+11
 
-@athreading.generate
-def controlled_counter(start, step):
-    current = start
-    while True:
-        time.sleep(0.5)  # Simulate a blocking I/O operation
-        received = yield current
-        current = received if received is not None else current + step
-
-async def amain():
-    async with controlled_counter(0, 1) as async_gen:
-        print(await async_gen.asend(None))  # Start the generator
-        print(await async_gen.asend(None))  # Advance with default step
-        print(await async_gen.asend(10))   # Send a new value to control the counter
-        print(await async_gen.asend(None))  # Continue from the new value
-
-asyncio.run(amain())
 ```
 
 This example demonstrates how `@athreading.generate` transforms a synchronous generator into an asynchronous generator. The `asend` method sends values to control the generator's state dynamically, enabling interactive workflows while avoiding blocking the event loop.

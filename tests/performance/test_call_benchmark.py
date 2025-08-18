@@ -4,6 +4,7 @@ import time
 
 import pytest
 import threaded
+from pytest_benchmark.fixture import BenchmarkFixture
 
 import athreading
 
@@ -59,11 +60,11 @@ def test_call_threaded_benchmark(benchmark):
     "impl", [asquare_blocking, asquare_threaded, asquare_athreading]
 )
 @pytest.mark.parametrize("delay", [0.0, 0.001])
-def test_single_call_benchmark(benchmark, impl, delay):
+def test_single_call_benchmark(benchmark: BenchmarkFixture, impl, delay):
     def test():
         return asyncio.run(impl(2, delay))
 
-    assert 4 == benchmark(test)
+    assert 4 == benchmark.pedantic(test)
 
 
 @pytest.mark.benchmark(group="call", disable_gc=True, warmup=True)

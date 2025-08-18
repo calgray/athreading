@@ -1,20 +1,31 @@
 [build-system]
-requires = ["poetry-core>=1.0.0"]
+requires = ["poetry-core>=2.0"]
 build-backend = "poetry.core.masonry.api"
 
-[tool.poetry]
+[project]
 name = "athreading"
 version = "0.2.1"
 description = "Asynchronous threading package for Python"
 readme = "README.md"
-authors = ["Callan Gray <cal.j.gray@gmail.com>"]
+requires-python = ">=3.9"
 license = "BSD-3-Clause"
-homepage = "https://github.com/calgray/athreading"
-repository = "https://github.com/calgray/athreading.git"
-packages = [{ include = "athreading", from = "src" }]
+authors = [
+    { name = "Callan Gray", email = "cal.j.gray@gmail.com" }
+]
+keywords = []
+dynamic = [ "classifiers" ]
 
-[tool.poetry.dependencies]
-python = "^3.9"
+[project.urls]
+repository = "https://github.com/calgray/athreading.git"
+homepage = "https://github.com/calgray/athreading"
+
+[tool.poetry]
+packages = [
+    { include = "athreading", from = "src" }
+]
+classifiers = [
+    "Framework :: AsyncIO",
+]
 
 [tool.poetry.group.test.dependencies]
 pytest = ">=7,<9"
@@ -26,11 +37,10 @@ pytest-benchmark = "^5.1.0"
 isort = ">=5.10.1,<7.0.0"
 pre-commit = ">=3.0.4,<5.0.0"
 black = ">=23.1,<26.0"
-flake8 = ">=6,<8"
+flake8 = ">=6"
 flake8-docstrings = "^1.6.0"
-flake8-pyproject = "^1.2.2"
+flake8-pyproject = ">=1.2.2"
 threaded = "^4.2.0"
-typing_extensions = { python = "3.13", version = ">4.12.0" }
 
 [tool.mypy]
 disallow_any_explicit = true
@@ -74,9 +84,53 @@ addopts = [
     "-v",
     "-p",
     "no:warnings",
-    "--cov=athreading",
-    "--cov-report=html",
+    # "--cov=athreading",
+    # "--cov-report=html",
     "--doctest-modules",
     "--benchmark-disable",
     "--ignore=athreading/__main__.py"
+]
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: not covered",
+    "@overload",
+    "if TYPE_CHECKING",
+]
+
+[tool.ruff]
+target-version = "py39"
+line-length = 99
+
+[tool.ruff.lint.isort]
+known-local-folder = ["src"]
+known-first-party = ["realtime.calibration", "tests"]
+known-third-party = ["realtime.receive.core", "realtime.receive.modules", "realtime.receive.processors"]
+
+[tool.ruff.format]
+skip-magic-trailing-comma = true
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "D",  # Docstring
+    "ANN",  # Require annotations
+    "UP",  # Upgrade
+    "S101",  # use of assert
+    "RSE102",  # paren on raise exception
+    "PGH003",  # Use specific rule codes when ignoring type issues
+    "COM812",  # Trailing comma missing
+    "TC001",  # Move application import to type-checking block
+    "TC002",  # Typing only third party import
+    "TC003",  # Move standard library import to type-checking block
+    "TD003",  # Missing issue link for this TODO
+    "FIX002",  # Line contains TODO, consider resolving the issue
+]
+
+[tool.ruff.lint.extend-per-file-ignores]
+"tests/*" = [
+    "PLR",  # magic values
+    "FBT001",  # boolean-typed positional arguments
+    "B011",  # Do not `assert False`
 ]

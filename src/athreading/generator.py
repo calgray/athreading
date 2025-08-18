@@ -12,14 +12,14 @@ from concurrent.futures import ThreadPoolExecutor
 from types import TracebackType
 from typing import Optional, TypeVar, Union
 
-if sys.version_info > (3, 12):
+if sys.version_info >= (3, 10):
     from typing import ParamSpec, overload, override
 else:  # pragma: not covered
     from typing_extensions import ParamSpec, overload, override
 
-from athreading.type_aliases import AsyncGeneratorContext
+from athreading.aliases import AsyncGeneratorContext
 
-__all__ = ["generate", "ThreadedAsyncGenerator"]
+__all__ = ["ThreadedAsyncGenerator", "generate"]
 
 
 ParamsT = ParamSpec("ParamsT")
@@ -31,6 +31,7 @@ SendT = TypeVar("SendT")
 def generate(
     fn: None = None,
     *,
+    buffer_maxsize: int = 0,
     executor: Optional[ThreadPoolExecutor] = None,
 ) -> Callable[
     [Callable[ParamsT, Generator[YieldT, Optional[SendT], None]]],
@@ -43,6 +44,7 @@ def generate(
 def generate(
     fn: Callable[ParamsT, Generator[YieldT, Optional[SendT], None]],
     *,
+    buffer_maxsize: int = 0,
     executor: Optional[ThreadPoolExecutor] = None,
 ) -> Callable[ParamsT, AsyncGeneratorContext[YieldT, SendT]]:
     ...
@@ -51,6 +53,7 @@ def generate(
 def generate(
     fn: Optional[Callable[ParamsT, Generator[YieldT, Optional[SendT], None]]] = None,
     *,
+    buffer_maxsize: int = 0,
     executor: Optional[ThreadPoolExecutor] = None,
 ) -> Union[
     Callable[ParamsT, AsyncGeneratorContext[YieldT, SendT]],
@@ -65,6 +68,8 @@ def generate(
     Args:
         fn (Callable[ParamsT, Generator[YieldT, Optional[SendT], None]], optional): Function
         returning a generator. Defaults to None.
+        buffer_maxsize: Maximum buffer size for background thread to pre-emptively pull data into.
+        Defaults to 0 (no-limit).
         executor (Optional[ThreadPoolExecutor], optional): Defaults to None.
 
     Returns:
@@ -72,19 +77,23 @@ def generate(
         with lazy argument evaluation.
     """
     if fn is None:
-        return _create_generate_decorator(executor=executor)
-    else:
+        return _create_generate_decorator(
+            buffer_maxsize=buffer_maxsize, executor=executor
+        )
 
-        @functools.wraps(fn)
-        def wrapper(
-            *args: ParamsT.args, **kwargs: ParamsT.kwargs
-        ) -> AsyncGeneratorContext[YieldT, SendT]:
-            return ThreadedAsyncGenerator(fn(*args, **kwargs), executor=executor)
+    @functools.wraps(fn)
+    def wrapper(
+        *args: ParamsT.args, **kwargs: ParamsT.kwargs
+    ) -> AsyncGeneratorContext[YieldT, SendT]:
+        return ThreadedAsyncGenerator(
+            fn(*args, **kwargs), buffer_maxsize=buffer_maxsize, executor=executor
+        )
 
-        return wrapper
+    return wrapper
 
 
 def _create_generate_decorator(
+    buffer_maxsize: int = 0,
     executor: Optional[ThreadPoolExecutor] = None,
 ) -> Callable[
     [Callable[ParamsT, Generator[YieldT, Optional[SendT], None]]],
@@ -97,7 +106,7 @@ def _create_generate_decorator(
         def wrapper(
             *args: ParamsT.args, **kwargs: ParamsT.kwargs
         ) -> AsyncGeneratorContext[YieldT, SendT]:
-            return ThreadedAsyncGenerator(fn(*args, **kwargs), executor)
+            return ThreadedAsyncGenerator(fn(*args, **kwargs), buffer_maxsize, executor)
 
         return wrapper
 
@@ -112,19 +121,25 @@ class ThreadedAsyncGenerator(AsyncGeneratorContext[YieldT, SendT]):
     def __init__(
         self,
         generator: Generator[YieldT, Optional[SendT], None],
+        buffer_maxsize: int = 0,
         executor: Optional[ThreadPoolExecutor] = None,
     ):
         """Initilizes a ThreadedAsyncGenerator from a synchronous generator.
 
         Args:
             generator (Generator[ItemT, SendT, None]): Synchronous generator.
+            buffer_maxsize: Maximum buffer size for background thread to pre-emptively pull
+            data into. Defaults to 0 (no limit).
             executor (ThreadPoolExecutor, optional): Shared thread pool instance. Defaults to
             ThreadPoolExecutor().
         """
         self._yield_semaphore = asyncio.Semaphore(0)
         self._done_event = threading.Event()
         self._send_queue: queue.Queue[Optional[SendT]] = queue.Queue()
-        self._yield_queue: queue.Queue[YieldT] = queue.Queue()
+        self._yield_queue: queue.Queue[YieldT] = queue.Queue(buffer_maxsize)
+        if buffer_maxsize:
+            for _ in range(buffer_maxsize):
+                self._send_queue.put(None)
         self._generator = generator
         self._executor = executor
         self._stream_future: Optional[asyncio.Future[None]] = None
@@ -143,6 +158,7 @@ class ThreadedAsyncGenerator(AsyncGeneratorContext[YieldT, SendT]):
         __exc_type: Optional[type[BaseException]],
         __val: Optional[BaseException],
         __tb: Optional[TracebackType],
+        /,
     ) -> None:
         # move to aclose
         assert self._stream_future is not None
@@ -182,6 +198,7 @@ class ThreadedAsyncGenerator(AsyncGeneratorContext[YieldT, SendT]):
         __typ: Union[type[BaseException], BaseException],
         __val: object = None,
         __tb: Optional[TracebackType] = None,
+        /,
     ) -> YieldT:
         """Raise a custom exception immediately from the generator"""
         if isinstance(__typ, BaseException):

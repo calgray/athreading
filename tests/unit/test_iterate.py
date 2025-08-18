@@ -1,36 +1,42 @@
+from __future__ import annotations
+
 import asyncio
 import sys
 import time
+from collections.abc import AsyncGenerator, Generator
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import suppress
+from typing import Union
 
 import pytest
 
 import athreading
 
-if sys.version_info > (3, 10):
+if sys.version_info >= (3, 10):
     from contextlib import nullcontext
 else:
     from tests.compat import nullcontext
 
-TEST_VALUES = [1, None, "", 2.0]
+TestData = Union[int, str, float, None]
+TEST_VALUES: list[TestData] = [1, None, "", 2.0]
 
-custom_executor = ThreadPoolExecutor()
+CUSTOM_EXECUTOR = ThreadPoolExecutor()
 
 
-def generator(delay=0.0, repeats=1):
+def generator(delay=0.0, repeats=1) -> Generator[TestData, TestData | None, None]:
     for _ in range(repeats):
         for item in TEST_VALUES:
             time.sleep(delay)
             yield item
 
 
-async def agenerate_naive(delay=0.0, repeats=1):
+async def agenerate_naive(delay=0.0, repeats=1) -> AsyncGenerator[TestData, None]:
     for value in generator(delay, repeats):
         yield value
         await asyncio.sleep(0.0)
 
 
-@athreading.iterate(executor=custom_executor)
+@athreading.iterate(executor=CUSTOM_EXECUTOR)
 def aiterate(delay=0.0, repeats=1):
     yield from generator(delay, repeats)
 
@@ -45,7 +51,7 @@ def aiterate_simplest(delay=0.0, repeats=1):
     yield from generator(delay, repeats)
 
 
-@athreading.generate(executor=custom_executor)
+@athreading.generate(executor=CUSTOM_EXECUTOR)
 def agenerate(delay=0.0, repeats=1):
     yield from generator(delay, repeats)
 
@@ -92,7 +98,7 @@ async def test_iterate_all(streamcontext, worker_delay, main_delay):
     output = []
     async with streamcontext(worker_delay) as stream:
         async for v in stream:
-            time.sleep(main_delay)
+            await asyncio.sleep(main_delay)
             output.append(v)
     assert output == TEST_VALUES
     await asyncio.wait_for(asyncio.get_running_loop().shutdown_default_executor(), 1.0)
@@ -117,8 +123,7 @@ async def test_iterate_all_parallel(streamcontext):
     async def process():
         outputs = []
         async with streamcontext(worker_delay, executor) as stream:
-            async for value in stream:
-                outputs.append(value)
+            outputs = [value async for value in stream]
         assert outputs == TEST_VALUES
 
     # set timeout between thread time and total thread time to ensure
@@ -128,7 +133,43 @@ async def test_iterate_all_parallel(streamcontext):
     timeout = thread_time + 0.5 * (total_thread_time - thread_time)
 
     await asyncio.wait_for(
-        asyncio.gather(*[process() for i in range(max_workers)]),
+        asyncio.gather(*[process() for _ in range(max_workers)]),
         timeout=timeout,
     )
+    await asyncio.wait_for(asyncio.get_running_loop().shutdown_default_executor(), 1.0)
+
+
+@pytest.mark.parametrize(
+    "streamcontext",
+    [
+        lambda buffer_maxsize: athreading.iterate(
+            generator, buffer_maxsize=buffer_maxsize
+        )(),
+        lambda buffer_maxsize: athreading.generate(
+            generator, buffer_maxsize=buffer_maxsize
+        )(),
+    ],
+    ids=[
+        "iterate",
+        "generate",
+    ],
+)
+@pytest.mark.parametrize("buffer_maxsize", [None, 2, 5, 6])
+@pytest.mark.asyncio
+async def test_iterate_buffer_maxsize(streamcontext, buffer_maxsize: int | None):
+    ctx = streamcontext(buffer_maxsize or 0)
+    stream = await ctx.__aenter__()
+    await asyncio.sleep(0.01)
+
+    with suppress(asyncio.TimeoutError):
+        async with asyncio.timeout(0.01):
+            await ctx.__aexit__(None, None, None)
+
+    output = [value async for value in stream]
+
+    # impossible to infinitely prebuffer with AsyncGenerator
+    if buffer_maxsize is None and isinstance(stream, AsyncGenerator):
+        buffer_maxsize = 0
+
+    assert output == TEST_VALUES[:buffer_maxsize]
     await asyncio.wait_for(asyncio.get_running_loop().shutdown_default_executor(), 1.0)
