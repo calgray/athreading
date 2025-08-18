@@ -6,7 +6,7 @@ from collections.abc import AsyncGenerator, AsyncIterator
 from contextlib import AbstractAsyncContextManager
 from typing import TypeVar
 
-_YieldT = TypeVar("_YieldT")
+_YieldT = TypeVar("_YieldT", covariant=True)
 _SendT = TypeVar("_SendT")
 
 

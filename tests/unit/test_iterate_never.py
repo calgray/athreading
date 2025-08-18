@@ -97,8 +97,6 @@ async def test_aiterate_never_context(
 
             async def aexit_after(time: float):
                 await asyncio.sleep(time)
-                # TODO: should the same as aiostream?
-                # await agenerator.__aexit__(None, None, None)
                 generator.__exit__(None, None, None)
 
             t = asyncio.create_task(aexit_after(2.0))

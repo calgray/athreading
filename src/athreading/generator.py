@@ -17,7 +17,7 @@ if sys.version_info > (3, 12):
 else:  # pragma: not covered
     from typing_extensions import ParamSpec, overload, override
 
-from athreading.type_aliases import AsyncGeneratorContext
+from athreading.aliases import AsyncGeneratorContext
 
 __all__ = ["generate", "ThreadedAsyncGenerator"]
 
