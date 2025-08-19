@@ -41,7 +41,7 @@ def test_call_athreading_benchmark(benchmark):
     def test():
         return asyncio.run(asquare_athreading(2, 0.0))
 
-    assert 4 == benchmark(test)
+    assert benchmark(test) == 4
 
 
 @pytest.mark.benchmark(group="call", disable_gc=True, warmup=True)
@@ -54,7 +54,7 @@ def test_call_threaded_benchmark(benchmark):
 
         return asyncio.run(atest())
 
-    assert 4 == benchmark(test)
+    assert benchmark(test) == 4
 
 
 @pytest.mark.benchmark(group="call", disable_gc=True, warmup=True)
@@ -66,7 +66,7 @@ def test_single_call_benchmark(benchmark: BenchmarkFixture, impl, delay):
     def test():
         return asyncio.run(impl(2, delay))
 
-    assert 4 == benchmark.pedantic(test)
+    assert benchmark.pedantic(test) == 4
 
 
 @pytest.mark.benchmark(group="call", disable_gc=True, warmup=True)
@@ -85,4 +85,4 @@ def test_multi_call_benchmark(benchmark, impl, num_tasks, delay):
 
     results = benchmark(test)
     for result in results:
-        assert 4 == result
+        assert result == 4

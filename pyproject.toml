@@ -42,9 +42,6 @@ flake8-docstrings = "^1.6.0"
 flake8-pyproject = ">=1.2.2"
 threaded = "^4.2.0"
 
-[tool.poetry.extras]
-dev = ["pytest", "threaded"]
-
 [tool.mypy]
 disallow_any_explicit = true
 disallow_any_generics = true

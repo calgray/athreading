@@ -13,6 +13,7 @@ repos:
     rev: v0.1.0
     hooks:
     - id: pyright-pretty
+      entry: poetry run pyright-pretty
   - repo: https://github.com/PyCQA/autoflake
     rev: v2.2.1
     hooks:

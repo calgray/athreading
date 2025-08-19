@@ -5,11 +5,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Install Poetry
+        uses: abatilo/actions-poetry@v3.0.1
         with:
-          python-version: 3.12
-      - name: Install Dev Dependencies
-        run: pip install .[dev]
+          poetry-version: 2.0.1
+      - name: Install dependencies
+        run: poetry install
       - uses: pre-commit/action@v3.0.1
 
   check-links:
@@ -40,7 +41,7 @@ jobs:
     - name: Install Poetry
       uses: abatilo/actions-poetry@v3.0.1
       with:
-        poetry-version: 1.2.2
+        poetry-version: 2.0.1
 
     - name: Setup Poetry
       if: runner.os == 'macOS'
@@ -71,7 +72,7 @@ jobs:
     - name: Install Poetry
       uses: abatilo/actions-poetry@v3.0.1
       with:
-        poetry-version: 1.2.2
+        poetry-version: 2.0.1
 
     - name: Install dependencies
       run: poetry install
