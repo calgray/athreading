@@ -33,7 +33,7 @@ def square_athreaded(x: float, delay: float = 0.0):
 
 
 async def asquare_threaded(x: float, delay: float = 0.0):
-    return await asyncio.wrap_future(square_athreaded(x, delay))
+    return await asyncio.wrap_future(square_athreaded(x, delay))  # pyright: ignore
 
 
 @pytest.mark.benchmark(group="call", disable_gc=True, warmup=True)
@@ -48,7 +48,9 @@ def test_call_athreading_benchmark(benchmark):
 def test_call_threaded_benchmark(benchmark):
     def test():
         async def atest():
-            return await asyncio.wrap_future(square_athreaded(2, 0.0))
+            return await asyncio.wrap_future(
+                square_athreaded(2, 0.0)  # pyright: ignore
+            )
 
         return asyncio.run(atest())
 

@@ -36,6 +36,8 @@ repos:
     rev: "v1.5.1"
     hooks:
       - id: mypy
+        additional_dependencies:
+          - pytest-mypy
   - repo: https://github.com/igorshubovych/markdownlint-cli
     rev: v0.37.0
     hooks:

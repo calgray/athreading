@@ -23,8 +23,8 @@ def aiterator(interval=0.0):
 
 def test_iterate():
     output = []
-    for v in iterator(interval=0.5):
-        output.append(v)
+    for value in iterator(interval=0.5):
+        output.append(value)
     assert output == DATA_VALUES
 
 
