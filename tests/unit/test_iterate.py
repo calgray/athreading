@@ -8,6 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import suppress
 from typing import Union
 
+import async_timeout
 import pytest
 
 import athreading
@@ -162,7 +163,7 @@ async def test_iterate_buffer_maxsize(streamcontext, buffer_maxsize: int | None)
     await asyncio.sleep(0.01)
 
     with suppress(asyncio.TimeoutError):
-        async with asyncio.timeout(0.01):
+        async with async_timeout.timeout(0.01):
             await ctx.__aexit__(None, None, None)
 
     output = [value async for value in stream]

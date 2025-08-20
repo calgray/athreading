@@ -25,9 +25,11 @@ packages = [
 ]
 classifiers = [
     "Framework :: AsyncIO",
+    "Typing :: Typed",
 ]
 
 [tool.poetry.group.test.dependencies]
+async-timeout = "^5.0.1"
 pytest = ">=7,<9"
 pytest-cov = ">=4,<7"
 pytest-mypy = "^0.10.0"
@@ -52,8 +54,9 @@ exclude = [".venv/"]
 ignore_missing_imports = false
 
 [[tool.mypy.overrides]]
-module = "tests.*"
+module = ["tests.*"]
 disallow_untyped_defs = false
+ignore_missing_imports = false
 
 [tool.flake8]
 max-line-length = 99
