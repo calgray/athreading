@@ -8,7 +8,7 @@ from time import sleep
 from types import TracebackType
 from typing import Callable, Optional, Union
 
-if sys.version_info > (3, 12):
+if sys.version_info >= (3, 12):
     from typing import override
 else:
     from typing_extensions import override
@@ -31,7 +31,7 @@ class NeverGenerator(
     def __enter__(self):
         return self
 
-    def __exit__(self, __exc_type, __val, __tb):
+    def __exit__(self, __exc_type, __val, __tb, /):
         self.close()
 
     def __next__(self):
@@ -51,6 +51,7 @@ class NeverGenerator(
         __exc_type: Union[type[BaseException], BaseException],
         __val: object = None,
         __tb: Optional[TracebackType] = None,
+        /,
     ) -> int:
         return 0
 
@@ -71,8 +72,7 @@ def test_iterate_never_context():
 
         future = executor.submit(exit_after, 2.0)
 
-        for v in generator:
-            output.append(v)
+        output.extend(value for value in generator)
 
         assert future.done()
 
@@ -89,7 +89,9 @@ def test_iterate_never_context():
 )
 @pytest.mark.asyncio
 async def test_aiterate_never_context(
-    streamcontext: Callable[[float], AbstractAsyncContextManager[AsyncIterator[int]]]
+    streamcontext: Callable[
+        [NeverGenerator], AbstractAsyncContextManager[AsyncIterator[int]]
+    ]
 ):
     output = []
     with NeverGenerator(delay=0.1) as generator:
@@ -100,8 +102,7 @@ async def test_aiterate_never_context(
                 generator.__exit__(None, None, None)
 
             t = asyncio.create_task(aexit_after(2.0))
-            async for v in agenerator:
-                output.append(v)
+            output.extend([value async for value in agenerator])
             await t
     assert output == []
     await asyncio.wait_for(asyncio.get_running_loop().shutdown_default_executor(), 1.0)
@@ -117,7 +118,7 @@ async def test_aiterate_never_context(
 @pytest.mark.asyncio
 async def test_aiterate_never_aclose(
     streamcontext: Callable[
-        [float], AbstractAsyncContextManager[AsyncGenerator[int, None]]
+        [NeverGenerator], AbstractAsyncContextManager[AsyncGenerator[int, None]]
     ]
 ):
     output = []
@@ -129,8 +130,7 @@ async def test_aiterate_never_aclose(
                 await agenerator.aclose()
 
             t = asyncio.create_task(aclose_after(2.0))
-            async for v in agenerator:
-                output.append(v)
+            output.extend([v async for v in agenerator])
             await t
     assert output == []
     await asyncio.wait_for(asyncio.get_running_loop().shutdown_default_executor(), 1.0)

@@ -1,30 +1,7 @@
 name: test
 on: [push, workflow_call]
 jobs:
-  qa:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install Poetry
-        uses: abatilo/actions-poetry@v3.0.1
-        with:
-          poetry-version: 2.0.1
-      - name: Install dependencies
-        run: poetry install
-      - uses: pre-commit/action@v3.0.1
-
-  check-links:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: gaurav-nelson/github-action-markdown-link-check@v1
-        name: Check links in markdown files
-        with:
-          use-quiet-mode: 'yes'
-          use-verbose-mode: 'yes'
-
   test:
-    needs: qa
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -59,8 +36,31 @@ jobs:
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
 
+  qa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Poetry
+        uses: abatilo/actions-poetry@v3.0.1
+        with:
+          poetry-version: 2.0.1
+      - name: Install dependencies
+        run: poetry install
+      - uses: pre-commit/action@v3.0.1
+
+  check-links:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: gaurav-nelson/github-action-markdown-link-check@v1
+        name: Check links in markdown files
+        with:
+          use-quiet-mode: 'yes'
+          use-verbose-mode: 'yes'
+
+
   benchmark:
-    needs: qa
+    needs: [test, qa]
     runs-on: ubuntu-latest
 
     steps:

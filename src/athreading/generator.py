@@ -12,7 +12,7 @@ from concurrent.futures import ThreadPoolExecutor
 from types import TracebackType
 from typing import Optional, TypeVar, Union
 
-if sys.version_info >= (3, 10):
+if sys.version_info >= (3, 12):
     from typing import ParamSpec, overload, override
 else:  # pragma: not covered
     from typing_extensions import ParamSpec, overload, override

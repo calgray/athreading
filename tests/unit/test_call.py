@@ -49,7 +49,7 @@ async def test_threaded_async_call_single(fn, worker_delay: float, main_delay: f
 @pytest.mark.asyncio
 async def test_threaded_async_call_cancel(fn, worker_delay: float, main_delay: float):
     fn = athreading.call(square)
-    time.sleep(main_delay)
+    await asyncio.sleep(main_delay)
     task = asyncio.create_task(fn(5, worker_delay))
     task.cancel()
     with pytest.raises(asyncio.CancelledError):
@@ -66,8 +66,8 @@ async def test_threaded_async_call_exception(
     fn, worker_delay: float, main_delay: float
 ):
     fn = athreading.call(square)
-    time.sleep(main_delay)
+    await asyncio.sleep(main_delay)
     with pytest.raises(
         TypeError, match="can't multiply sequence by non-int of type 'str'"
     ):
-        _ = await fn("a", worker_delay)
+        _ = await fn("a", worker_delay)  # pyright: ignore
