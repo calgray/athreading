@@ -1,5 +1,7 @@
 """Function utilities."""
 
+from __future__ import annotations
+
 import asyncio
 import functools
 import sys
@@ -7,7 +9,7 @@ from collections.abc import Coroutine
 from concurrent.futures import ThreadPoolExecutor
 from typing import Callable, Optional, TypeVar, Union, overload
 
-if sys.version_info > (3, 10):
+if sys.version_info >= (3, 10):
     from typing import ParamSpec
 else:  # pragma: not covered
     from typing_extensions import ParamSpec

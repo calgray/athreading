@@ -7,6 +7,7 @@
 
 * Added contributing document.
 * Added code of conduct.
+* Added `buffer_maxsize` to `iterate` and `generate`.
 
 ## Changed
 
