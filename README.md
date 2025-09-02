@@ -19,7 +19,8 @@
 - **`@athreading.iterate`**: Converts a synchronous iterator into an asynchronous iterator.
 - **`@athreading.generate`**: Converts a synchronous generator into an asynchronous generator.
 
-*Note*: Due to Python's Global Interpreter Lock (GIL), this library does not provide multi-threaded CPU parallelism unless using Python 3.9 with `nogil` or Python 3.13 with free threading enabled.
+> [!NOTE]
+> Due to Python's Global Interpreter Lock (GIL), this library does not provide multi-threaded CPU parallelism unless using Python 3.9 with `nogil` or Python 3.13 with free threading enabled.
 
 ## Installation
 
