@@ -87,8 +87,6 @@ addopts = [
     "-v",
     "-p",
     "no:warnings",
-    # "--cov=athreading",
-    # "--cov-report=html",
     "--doctest-modules",
     "--benchmark-disable",
     "--ignore=athreading/__main__.py"
