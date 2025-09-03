@@ -24,7 +24,7 @@ jobs:
     - name: Poetry Build
       run: poetry build
     - name: Publish distribution 📦 to PyPI
-      uses: pypa/gh-action-pypi-publish@v1.12.3
+      uses: pypa/gh-action-pypi-publish@v1.12.4
 
   # gitlab-oci-publish:
   #   runs-on: ubuntu-latest
