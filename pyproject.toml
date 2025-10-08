@@ -32,13 +32,14 @@ classifiers = [
 async-timeout = "^5.0.1"
 pytest = ">=7,<9"
 pytest-cov = ">=4,<7"
-pytest-mypy = "^0.10.0"
+pytest-mypy = "^1.0.1"
 pytest-mock = "^3.14.0"
 pytest-asyncio = ">=0.20.3,<0.26.0"
 pytest-benchmark = "^5.1.0"
 isort = ">=5.10.1,<7.0.0"
 pre-commit = ">=3.0.4,<5.0.0"
 black = ">=23.1,<26.0"
+mypy = "^1.18.0"
 flake8 = ">=6"
 flake8-docstrings = "^1.6.0"
 flake8-pyproject = ">=1.2.2"
@@ -52,6 +53,10 @@ warn_unused_ignores = true
 disallow_untyped_defs = true
 exclude = [".venv/"]
 ignore_missing_imports = false
+
+[[tool.mypy.overrides]]
+module = ["pytest_benchmark.*"]
+follow_untyped_imports = true
 
 [[tool.mypy.overrides]]
 module = ["tests.*"]

@@ -51,12 +51,11 @@ def call(
     thread-safe asynchronous Callable.
 
     Args:
-        fn (Callable[ParamsT, ReturnT], optional): thread-safe synchronous function. Defaults to
-        None.
-        executor: (ThreadPoolExecutor, optional): Defaults to asyncio default executor.
+        fn: thread-safe synchronous function. Defaults to None.
+        executor: Defaults to asyncio default executor.
 
     Returns:
-        Callable[ParamsT, Coroutine[None, None, ReturnT]]: thread-safe asynchronous function.
+        Thread-safe asynchronous function.
     """
     if fn is None:
         return _create_call_decorator(executor=executor)

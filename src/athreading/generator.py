@@ -66,15 +66,13 @@ def generate(
     thread-safe async generator.
 
     Args:
-        fn (Callable[ParamsT, Generator[YieldT, Optional[SendT], None]], optional): Function
-        returning a generator. Defaults to None.
+        fn: Function returning a generator. Defaults to None.
         buffer_maxsize: Maximum buffer size for background thread to pre-emptively pull data into.
         Defaults to 0 (no-limit).
-        executor (Optional[ThreadPoolExecutor], optional): Defaults to None.
+        executor: Defaults to None.
 
     Returns:
-        Callable[ParamsT, ThreadedAsyncGenerator[YieldT, SendT]]: Decorated generator function
-        with lazy argument evaluation.
+        Decorated generator function with lazy argument evaluation.
     """
     if fn is None:
         return _create_generate_decorator(
@@ -127,10 +125,10 @@ class ThreadedAsyncGenerator(AsyncGeneratorContext[YieldT, SendT]):
         """Initilizes a ThreadedAsyncGenerator from a synchronous generator.
 
         Args:
-            generator (Generator[ItemT, SendT, None]): Synchronous generator.
+            generator: Synchronous generator.
             buffer_maxsize: Maximum buffer size for background thread to pre-emptively pull
             data into. Defaults to 0 (no limit).
-            executor (ThreadPoolExecutor, optional): Shared thread pool instance. Defaults to
+            executor: Shared thread pool instance. Defaults to
             ThreadPoolExecutor().
         """
         self._yield_semaphore = asyncio.Semaphore(0)

@@ -123,7 +123,7 @@ class ThreadedAsyncIterator(AsyncIteratorContext[YieldT]):
         Args:
             iterator: Synchronous iterator or iterable.
             buffer_maxsize: Maximum number of items the iterator will buffer before blocking
-            the producer and putting backpressure on the source. Defaults to 0 (no-limit).
+            and putting backpressure on the source. Defaults to 0 (no-limit).
             executor: Shared thread pool instance. Defaults to ThreadPoolExecutor().
         """
         self._yield_semaphore = asyncio.Semaphore(0)
