@@ -59,8 +59,7 @@ def call(
     """
     if fn is None:
         return _create_call_decorator(executor=executor)
-    else:
-        return _call(fn, executor=executor)
+    return _call(fn, executor=executor)
 
 
 def _create_call_decorator(
