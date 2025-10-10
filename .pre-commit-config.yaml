@@ -9,6 +9,11 @@ repos:
     hooks:
       - id: pyupgrade
         args: ["--py39-plus", "--keep-runtime-typing"]
+  - repo: https://github.com/northisup/pyright-pretty
+    rev: v0.1.0
+    hooks:
+    - id: pyright-pretty
+      entry: poetry run pyright-pretty
   - repo: https://github.com/PyCQA/autoflake
     rev: v2.2.1
     hooks:
@@ -23,14 +28,17 @@ repos:
     hooks:
       - id: black
   - repo: https://github.com/PyCQA/flake8
-    rev: 6.1.0
+    rev: 7.0.0
     hooks:
       - id: flake8
-        additional_dependencies: [flake8-docstrings]
+        entry: pflake8
+        additional_dependencies: [pyproject-flake8, flake8-docstrings]
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: "v1.5.1"
     hooks:
       - id: mypy
+        additional_dependencies:
+          - pytest-mypy
   - repo: https://github.com/igorshubovych/markdownlint-cli
     rev: v0.37.0
     hooks:

@@ -5,33 +5,34 @@ import pytest
 
 import athreading
 
-TEST_VALUES = [1, 2, 3, 4]
+DATA_VALUES = [1, 2, 3, 4]
 
 executor = ThreadPoolExecutor()
 
 
-def iterator(delay=0.0):
-    for item in TEST_VALUES:
-        time.sleep(delay)
+def iterator(interval=0.0):
+    for item in DATA_VALUES:
+        time.sleep(interval)
         yield item
 
 
 @athreading.iterate(executor=executor)
-def aiterator(delay=0.0):
-    return iterator(delay)
+def aiterator(interval=0.0):
+    return iterator(interval)
 
 
 def test_iterate():
     output = []
-    for v in iterator(delay=0.5):
-        output.append(v)
-    assert output == TEST_VALUES
+    for value in iterator(interval=0.5):
+        output.append(value)
+    assert output == DATA_VALUES
 
 
 @pytest.mark.asyncio
 async def test_aiterate():
     output = []
-    async with aiterator(delay=0.5) as stream:
-        async for v in stream:
-            output.append(v)
-    assert output == TEST_VALUES
+    async with aiterator(interval=0.5) as stream:
+        # can switch to other tasks while waiting for stream
+        async for value in stream:
+            output.append(value)
+    assert output == DATA_VALUES
