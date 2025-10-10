@@ -30,7 +30,7 @@ YieldT = TypeVar("YieldT")
 def iterate(
     fn: None = None,
     *,
-    buffer_maxsize: int = 0,
+    buffer_maxsize: Optional[int] = None,
     executor: Optional[ThreadPoolExecutor] = None,
 ) -> Callable[
     [Callable[ParamsT, Iterator[YieldT]]],
@@ -43,7 +43,7 @@ def iterate(
 def iterate(
     fn: Callable[ParamsT, Iterator[YieldT]],
     *,
-    buffer_maxsize: int = 0,
+    buffer_maxsize: Optional[int] = None,
     executor: Optional[ThreadPoolExecutor] = None,
 ) -> Callable[ParamsT, AsyncIteratorContext[YieldT]]:
     ...
@@ -52,7 +52,7 @@ def iterate(
 def iterate(
     fn: Optional[Callable[ParamsT, Iterator[YieldT]]] = None,
     *,
-    buffer_maxsize: int = 0,
+    buffer_maxsize: Optional[int] = None,
     executor: Optional[ThreadPoolExecutor] = None,
 ) -> Union[
     Callable[ParamsT, AsyncIteratorContext[YieldT]],
@@ -65,15 +65,13 @@ def iterate(
     AsyncIterator.
 
     Args:
-        fn: Function returning an iterator or
-        iterable. Defaults to None.
-        buffer_maxsize: Maximum buffer size for background thread to pre-emptively pull data into.
-        Defaults to 0 (no-limit).
+        fn: Function returning an iterator or iterable. Defaults to None.
+        buffer_maxsize: Maximum number of items the background worker will buffer before
+            blocking and putting backpressure on the source. Defaults to None (no-limit).
         executor: Defaults to None.
 
     Returns:
-        Callable[ParamsT, AsyncIteratorContext[YieldT]]: Decorated iterator function with lazy
-        argument evaluation.
+        Decorated iterator function with lazy argument evaluation.
     """
     if fn is None:
         return _create_iterate_decorator(executor=executor)
@@ -90,6 +88,7 @@ def iterate(
 
 
 def _create_iterate_decorator(
+    buffer_maxsize: Optional[int] = None,
     executor: Optional[ThreadPoolExecutor] = None,
 ) -> Callable[
     [Callable[ParamsT, Iterator[YieldT]]],
@@ -102,7 +101,9 @@ def _create_iterate_decorator(
         def wrapper(
             *args: ParamsT.args, **kwargs: ParamsT.kwargs
         ) -> AsyncIteratorContext[YieldT]:
-            return ThreadedAsyncIterator(fn(*args, **kwargs), executor=executor)
+            return ThreadedAsyncIterator(
+                fn(*args, **kwargs), buffer_maxsize, executor=executor
+            )
 
         return wrapper
 
@@ -115,28 +116,28 @@ class ThreadedAsyncIterator(AsyncIteratorContext[YieldT]):
     def __init__(
         self,
         iterator: Iterator[YieldT],
-        buffer_maxsize: int = 0,
+        buffer_maxsize: Optional[int] = None,
         executor: Optional[ThreadPoolExecutor] = None,
     ):
         """Initilizes a ThreadedAsyncIterator from a synchronous iterator.
 
         Args:
             iterator: Synchronous iterator or iterable.
-            buffer_maxsize: Maximum number of items the async iterator will buffer before blocking
-            and putting backpressure on the source. Defaults to 0 (no-limit).
+            buffer_maxsize: Maximum number of items the background worker will buffer before
+                blocking and putting backpressure on the source. Defaults to None (no-limit).
             executor: Shared thread pool instance. Defaults to ThreadPoolExecutor().
         """
         self._yield_semaphore = asyncio.Semaphore(0)
         self._done_event = threading.Event()
-        self._queue: queue.Queue[YieldT] = queue.Queue(buffer_maxsize)
+        self._queue: queue.Queue[YieldT] = queue.Queue(buffer_maxsize or 0)
         self._iterator = iterator
         self._executor = executor
-        self._stream_future: Optional[asyncio.Future[None]] = None
+        self._worker_future: Optional[asyncio.Future[None]] = None
 
     @override
     async def __aenter__(self) -> ThreadedAsyncIterator[YieldT]:
         self._loop = asyncio.get_running_loop()
-        self._stream_future = self._loop.run_in_executor(
+        self._worker_future = self._loop.run_in_executor(
             self._executor, self.__worker_threadsafe
         )
         return self
@@ -149,14 +150,14 @@ class ThreadedAsyncIterator(AsyncIteratorContext[YieldT]):
         __tb: Optional[TracebackType],
         /,
     ) -> None:
-        assert self._stream_future is not None
+        assert self._worker_future is not None
         self._done_event.set()
         self._yield_semaphore.release()
-        await self._stream_future
+        await self._worker_future
 
     async def __anext__(self) -> YieldT:
         assert (
-            self._stream_future is not None
+            self._worker_future is not None
         ), "Iteration started before entering context"
         if not self._done_event.is_set() or not self._queue.empty():
             await self._yield_semaphore.acquire()

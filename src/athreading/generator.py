@@ -31,7 +31,7 @@ SendT = TypeVar("SendT")
 def generate(
     fn: None = None,
     *,
-    buffer_maxsize: int = 0,
+    buffer_maxsize: Optional[int] = None,
     executor: Optional[ThreadPoolExecutor] = None,
 ) -> Callable[
     [Callable[ParamsT, Generator[YieldT, Optional[SendT], None]]],
@@ -44,7 +44,7 @@ def generate(
 def generate(
     fn: Callable[ParamsT, Generator[YieldT, Optional[SendT], None]],
     *,
-    buffer_maxsize: int = 0,
+    buffer_maxsize: Optional[int] = None,
     executor: Optional[ThreadPoolExecutor] = None,
 ) -> Callable[ParamsT, AsyncGeneratorContext[YieldT, SendT]]:
     ...
@@ -53,7 +53,7 @@ def generate(
 def generate(
     fn: Optional[Callable[ParamsT, Generator[YieldT, Optional[SendT], None]]] = None,
     *,
-    buffer_maxsize: int = 0,
+    buffer_maxsize: Optional[int] = None,
     executor: Optional[ThreadPoolExecutor] = None,
 ) -> Union[
     Callable[ParamsT, AsyncGeneratorContext[YieldT, SendT]],
@@ -67,8 +67,8 @@ def generate(
 
     Args:
         fn: Function returning a generator. Defaults to None.
-        buffer_maxsize: Maximum buffer size for background thread to pre-emptively pull data into.
-        Defaults to 0 (no-limit).
+        buffer_maxsize: Maximum buffer size for background worker to pre-emptively pull
+            data into. Defaults to None (no priming).
         executor: Defaults to None.
 
     Returns:
@@ -91,7 +91,7 @@ def generate(
 
 
 def _create_generate_decorator(
-    buffer_maxsize: int = 0,
+    buffer_maxsize: Optional[int] = None,
     executor: Optional[ThreadPoolExecutor] = None,
 ) -> Callable[
     [Callable[ParamsT, Generator[YieldT, Optional[SendT], None]]],
@@ -119,34 +119,33 @@ class ThreadedAsyncGenerator(AsyncGeneratorContext[YieldT, SendT]):
     def __init__(
         self,
         generator: Generator[YieldT, Optional[SendT], None],
-        buffer_maxsize: int = 0,
+        buffer_maxsize: Optional[int] = None,
         executor: Optional[ThreadPoolExecutor] = None,
     ):
         """Initilizes a ThreadedAsyncGenerator from a synchronous generator.
 
         Args:
             generator: Synchronous generator.
-            buffer_maxsize: Maximum buffer size for background thread to pre-emptively pull
-            data into. Defaults to 0 (no limit).
-            executor: Shared thread pool instance. Defaults to
-            ThreadPoolExecutor().
+            buffer_maxsize: Maximum buffer size for background worker to pre-emptively pull
+                data into. Defaults to None (no priming).
+            executor: Shared thread pool instance. Defaults to ThreadPoolExecutor().
         """
         self._yield_semaphore = asyncio.Semaphore(0)
         self._done_event = threading.Event()
         self._send_queue: queue.Queue[Optional[SendT]] = queue.Queue()
-        self._yield_queue: queue.Queue[YieldT] = queue.Queue(buffer_maxsize)
+        self._yield_queue: queue.Queue[YieldT] = queue.Queue(buffer_maxsize or 0)
         if buffer_maxsize:
             for _ in range(buffer_maxsize):
                 self._send_queue.put(None)
         self._generator = generator
         self._executor = executor
-        self._stream_future: Optional[asyncio.Future[None]] = None
+        self._worker_future: Optional[asyncio.Future[None]] = None
 
     @override
     async def __aenter__(self) -> ThreadedAsyncGenerator[YieldT, SendT]:
         self._loop = asyncio.get_running_loop()
-        self._stream_future = self._loop.run_in_executor(
-            self._executor, self.__stream_threadsafe
+        self._worker_future = self._loop.run_in_executor(
+            self._executor, self.__worker_threadsafe
         )
         return self
 
@@ -159,16 +158,16 @@ class ThreadedAsyncGenerator(AsyncGeneratorContext[YieldT, SendT]):
         /,
     ) -> None:
         # move to aclose
-        assert self._stream_future is not None
+        assert self._worker_future is not None
         self._done_event.set()
         self._yield_semaphore.release()
         self._send_queue.put(None)
-        await self._stream_future
+        await self._worker_future
 
     @override
     async def __anext__(self) -> YieldT:
         assert (
-            self._stream_future is not None
+            self._worker_future is not None
         ), "Iteration started before entering context"
         self._send_queue.put(None)
         return await self.__get()
@@ -203,7 +202,7 @@ class ThreadedAsyncGenerator(AsyncGeneratorContext[YieldT, SendT]):
             raise __typ
         return self._generator.throw(__typ, __val, __tb)
 
-    def __stream_threadsafe(self) -> None:
+    def __worker_threadsafe(self) -> None:
         """Stream the synchronous itertor to the queue and notify the async thread."""
         try:
             while not self._done_event.is_set():

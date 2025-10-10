@@ -164,12 +164,15 @@ async def test_iterate_buffer_maxsize(streamcontext, buffer_maxsize: int | None)
         buffer_maxsize: max amount of buffering whilest the iterator isn't started
     """
 
-    ctx = streamcontext(buffer_maxsize or 0)
+    ctx = streamcontext(buffer_maxsize)
     stream = await ctx.__aenter__()
 
-    # NOTE: impossible to buffer infinitely with AsyncGenerator
-    if buffer_maxsize is None and isinstance(stream, AsyncGenerator):
-        buffer_maxsize = 0
+    # NOTE: AsyncGenerator with None performs no priming
+    expected_len = (
+        0
+        if buffer_maxsize is None and isinstance(stream, AsyncGenerator)
+        else buffer_maxsize
+    )
 
     worker_time_s = 0.005
     await asyncio.sleep(worker_time_s)
@@ -178,5 +181,5 @@ async def test_iterate_buffer_maxsize(streamcontext, buffer_maxsize: int | None)
 
     output = [value async for value in stream]
 
-    assert output == TEST_VALUES[:buffer_maxsize]
+    assert output == TEST_VALUES[:expected_len]
     await asyncio.wait_for(asyncio.get_running_loop().shutdown_default_executor(), 1.0)
