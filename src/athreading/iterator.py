@@ -122,7 +122,7 @@ class ThreadedAsyncIterator(AsyncIteratorContext[YieldT]):
 
         Args:
             iterator: Synchronous iterator or iterable.
-            buffer_maxsize: Maximum number of items the iterator will buffer before blocking
+            buffer_maxsize: Maximum number of items the async iterator will buffer before blocking
             and putting backpressure on the source. Defaults to 0 (no-limit).
             executor: Shared thread pool instance. Defaults to ThreadPoolExecutor().
         """
@@ -137,7 +137,7 @@ class ThreadedAsyncIterator(AsyncIteratorContext[YieldT]):
     async def __aenter__(self) -> ThreadedAsyncIterator[YieldT]:
         self._loop = asyncio.get_running_loop()
         self._stream_future = self._loop.run_in_executor(
-            self._executor, self.__stream_threadsafe
+            self._executor, self.__worker_threadsafe
         )
         return self
 
@@ -164,12 +164,17 @@ class ThreadedAsyncIterator(AsyncIteratorContext[YieldT]):
                 return self._queue.get(False)
         raise StopAsyncIteration
 
-    def __stream_threadsafe(self) -> None:
+    def __worker_threadsafe(self) -> None:
         """Stream the synchronous iterator to the queue and notify the async thread."""
         try:
             for item in self._iterator:
                 self._queue.put(item)
                 self._loop.call_soon_threadsafe(self._yield_semaphore.release)
+
+                while self._queue.full() and not self._done_event.is_set():
+                    with self._queue.not_full:
+                        self._queue.not_full.wait(timeout=0.1)
+
                 if self._done_event.is_set():
                     break
         finally:

@@ -5,7 +5,6 @@ import sys
 import time
 from collections.abc import AsyncGenerator, Generator
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import suppress
 from typing import Union
 
 import async_timeout
@@ -155,22 +154,29 @@ async def test_iterate_all_parallel(streamcontext):
         "generate",
     ],
 )
-@pytest.mark.parametrize("buffer_maxsize", [None, 2, 5, 6])
+@pytest.mark.parametrize("buffer_maxsize", [None, 1, 2, 3, 5, 6])
 @pytest.mark.asyncio
 async def test_iterate_buffer_maxsize(streamcontext, buffer_maxsize: int | None):
+    """test background worker stops at the buffer maxsize
+
+    Args:
+        streamcontext: athreading iterator.
+        buffer_maxsize: max amount of buffering whilest the iterator isn't started
+    """
+
     ctx = streamcontext(buffer_maxsize or 0)
     stream = await ctx.__aenter__()
-    await asyncio.sleep(0.01)
 
-    with suppress(asyncio.TimeoutError):
-        async with async_timeout.timeout(0.01):
-            await ctx.__aexit__(None, None, None)
-
-    output = [value async for value in stream]
-
-    # impossible to infinitely prebuffer with AsyncGenerator
+    # NOTE: impossible to buffer infinitely with AsyncGenerator
     if buffer_maxsize is None and isinstance(stream, AsyncGenerator):
         buffer_maxsize = 0
+
+    worker_time_s = 0.005
+    await asyncio.sleep(worker_time_s)
+    async with async_timeout.timeout(1.0):
+        await ctx.__aexit__(None, None, None)
+
+    output = [value async for value in stream]
 
     assert output == TEST_VALUES[:buffer_maxsize]
     await asyncio.wait_for(asyncio.get_running_loop().shutdown_default_executor(), 1.0)
