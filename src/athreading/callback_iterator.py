@@ -67,7 +67,7 @@ def iterate_callback(  # type: ignore[misc]
     Args:
         fn: Function accepting a callback.
         Defaults to None.
-        executor: Defaults to None.
+        executor: Shared thread pool instance. Defaults to None (new threadpool).
 
     Returns:
         Decorated iterator function with lazy argument evaluation.
@@ -120,8 +120,8 @@ class CallbackThreadedAsyncIterator(AsyncIteratorContext[_YieldT]):
         """Initializer.
 
         Args:
-            runner: _description_
-            executor: _description_. Defaults to None.
+            runner: Function accepting a callback.
+            executor: Shared thread pool instance. Defaults to None (new threadpool).
         """
         self._yield_semaphore = asyncio.Semaphore(0)
         self._done_event = threading.Event()
