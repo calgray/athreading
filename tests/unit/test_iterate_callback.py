@@ -5,7 +5,7 @@ import time
 from collections.abc import AsyncGenerator
 from concurrent.futures import ThreadPoolExecutor
 from queue import Queue
-from typing import Callable
+from typing import Callable, Union
 
 import pytest
 
@@ -17,8 +17,10 @@ if sys.version_info > (3, 10):
 else:
     from tests.compat import nullcontext
 
-TestData = int | str | float | None
+TestData = Union[int, str, float, None]
+
 TEST_VALUES = [1, None, "", 2.0]
+
 
 custom_executor = ThreadPoolExecutor()
 
@@ -43,17 +45,17 @@ async def agenerate_naive(delay=0.0, repeats=1) -> AsyncGenerator[TestData, None
 
 
 @athreading.iterate_callback(executor=custom_executor)
-def aiterate(callback, delay=0.0, repeats=1):
+def aiterate(callback: Callable[[TestData], None], delay=0.0, repeats=1):
     iterate_with_callback(callback, delay, repeats)
 
 
 @athreading.iterate_callback()
-def aiterate_simpler(callback, delay=0.0, repeats=1):
+def aiterate_simpler(callback: Callable[[TestData], None], delay=0.0, repeats=1):
     iterate_with_callback(callback, delay, repeats)
 
 
 @athreading.iterate_callback
-def aiterate_simplest(callback, delay=0.0, repeats=1):
+def aiterate_simplest(callback: Callable[[TestData], None], delay=0.0, repeats=1):
     iterate_with_callback(callback, delay, repeats)
 
 

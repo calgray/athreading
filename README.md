@@ -141,7 +141,7 @@ The `@athreading.generate` decorator converts a synchronous generator function i
 >>> import athreading
 >>> import time
 >>> import asyncio
->>> 
+>>>
 >>> @athreading.generate
 ... def controlled_counter(start, step):
 ...     current = start

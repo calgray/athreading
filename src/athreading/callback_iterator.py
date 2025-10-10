@@ -6,33 +6,27 @@ import asyncio
 import functools
 import sys
 import threading
-from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
-from typing import Optional, Protocol, TypeVar, Union
+from contextlib import suppress
+from typing import TYPE_CHECKING, Optional, TypeVar, Union
 
 from athreading.aliases import AsyncIteratorContext
 
-if sys.version_info > (3, 12):
-    from typing import ParamSpec, overload, override
+if sys.version_info >= (3, 11):
+    from typing import Concatenate, ParamSpec, overload
 else:  # pragma: not covered
-    from typing_extensions import ParamSpec, overload, override
+    from typing_extensions import Concatenate, ParamSpec, overload
 
+if TYPE_CHECKING:
+    from types import TracebackType
+
+from collections.abc import Callable
 
 _ParamsT = ParamSpec("_ParamsT")
+_YieldT_co = TypeVar("_YieldT_co", covariant=True)
 _YieldT = TypeVar("_YieldT")
 
-
-class CallableWithCallback(Protocol[_ParamsT, _YieldT]):  # type: ignore
-    """Callback protocol where the callback is always the first positional argument."""
-
-    def __call__(
-        self,
-        callback: Callable[[_YieldT], None],
-        *args: _ParamsT.args,
-        **kwargs: _ParamsT.kwargs,
-    ):
-        """Call the callable."""
-        ...
+CallableWithCallback = Callable[Concatenate[Callable[[_YieldT], None], _ParamsT], None]
 
 
 @overload
@@ -41,30 +35,30 @@ def iterate_callback(
     *,
     executor: Optional[ThreadPoolExecutor] = None,
 ) -> Callable[
-    [CallableWithCallback[_ParamsT, _YieldT]],
-    Callable[_ParamsT, AsyncIteratorContext[_YieldT]],
+    [CallableWithCallback[_YieldT_co, _ParamsT]],
+    Callable[_ParamsT, AsyncIteratorContext[_YieldT_co]],
 ]:
     ...
 
 
 @overload
 def iterate_callback(
-    fn: CallableWithCallback[_ParamsT, _YieldT],
+    fn: CallableWithCallback[_YieldT_co, _ParamsT],
     *,
     executor: Optional[ThreadPoolExecutor] = None,
-) -> Callable[_ParamsT, AsyncIteratorContext[_YieldT]]:
+) -> Callable[_ParamsT, AsyncIteratorContext[_YieldT_co]]:
     ...
 
 
-def iterate_callback(
-    fn: Optional[CallableWithCallback[_ParamsT, _YieldT]] = None,
+def iterate_callback(  # type: ignore[misc]
+    fn: Optional[CallableWithCallback[_YieldT_co, _ParamsT]] = None,
     *,
     executor: Optional[ThreadPoolExecutor] = None,
 ) -> Union[
-    Callable[_ParamsT, AsyncIteratorContext[_YieldT]],
+    Callable[_ParamsT, AsyncIteratorContext[_YieldT_co]],
     Callable[
-        [CallableWithCallback[_ParamsT, _YieldT]],
-        Callable[_ParamsT, AsyncIteratorContext[_YieldT]],
+        [CallableWithCallback[_YieldT_co, _ParamsT]],
+        Callable[_ParamsT, AsyncIteratorContext[_YieldT_co]],
     ],
 ]:
     """Decorates a callback based generator with a ThreadPoolExecutor and exposes a thread-safe
@@ -76,17 +70,16 @@ def iterate_callback(
         executor: Defaults to None.
 
     Returns:
-        Callable[ParamsT, AsyncIteratorContext[_YieldT]]: Decorated iterator function with lazy
-        argument evaluation.
+        Decorated iterator function with lazy argument evaluation.
     """
     if fn is None:
-        return _create_iterate_decorator(executor=executor)
+        return _create_iterate_decorator(executor=executor)  # type: ignore[return-value]
     else:
 
         @functools.wraps(fn)
         def wrapper(
             *args: _ParamsT.args, **kwargs: _ParamsT.kwargs
-        ) -> AsyncIteratorContext[_YieldT]:
+        ) -> AsyncIteratorContext[_YieldT_co]:
             return CallbackThreadedAsyncIterator(
                 lambda callback: fn(callback, *args, **kwargs), executor=executor
             )
@@ -97,36 +90,43 @@ def iterate_callback(
 def _create_iterate_decorator(
     executor: Optional[ThreadPoolExecutor] = None,
 ) -> Callable[
-    [CallableWithCallback[_ParamsT, _YieldT]],
-    Callable[_ParamsT, AsyncIteratorContext[_YieldT]],
+    [CallableWithCallback[_YieldT_co, _ParamsT]],
+    Callable[_ParamsT, AsyncIteratorContext[_YieldT_co]],
 ]:
     def decorator(
-        fn: CallableWithCallback[_ParamsT, _YieldT],
-    ) -> Callable[_ParamsT, AsyncIteratorContext[_YieldT]]:
+        fn: CallableWithCallback[_YieldT_co, _ParamsT],
+    ) -> Callable[_ParamsT, AsyncIteratorContext[_YieldT_co]]:
         @functools.wraps(fn)
         def wrapper(
             *args: _ParamsT.args, **kwargs: _ParamsT.kwargs
-        ) -> AsyncIteratorContext[_YieldT]:
+        ) -> AsyncIteratorContext[_YieldT_co]:
             return CallbackThreadedAsyncIterator(
                 lambda callback: fn(callback, *args, **kwargs), executor=executor
             )
 
         return wrapper
 
-    return decorator
+    return decorator  # type: ignore[return-value]
 
 
 class CallbackThreadedAsyncIterator(AsyncIteratorContext[_YieldT]):
+    """Thread-based async iterator using blocking call with callback."""
+
     def __init__(
         self,
         runner: Callable[[Callable[[_YieldT], None]], None],
         executor: Optional[ThreadPoolExecutor] = None,
     ):
+        """Initializer.
+
+        Args:
+            runner: _description_
+            executor: _description_. Defaults to None.
+        """
         self._yield_semaphore = asyncio.Semaphore(0)
         self._done_event = threading.Event()
-        # Now queue holds tuples: (value, exception)
         self._queue: asyncio.Queue[
-            Tuple[Optional[_YieldT], Optional[BaseException]]
+            tuple[_YieldT, None] | tuple[None, BaseException]
         ] = asyncio.Queue()
         self._runner = runner
         self._executor = executor
@@ -138,16 +138,20 @@ class CallbackThreadedAsyncIterator(AsyncIteratorContext[_YieldT]):
         self._stream_future = asyncio.create_task(self.__arun())
         return self
 
-    async def __aexit__(self, exc_type, exc, tb) -> None:
+    async def __aexit__(
+        self,
+        __exc_type: Optional[type[BaseException]],
+        __val: Optional[BaseException],
+        __tb: Optional[TracebackType],
+        /,
+    ) -> None:
         assert self._stream_future is not None
         self._done_event.set()
         self._yield_semaphore.release()
         if not self._stream_future.done():
             self._stream_future.cancel()
-            try:
+            with suppress(asyncio.CancelledError):
                 await self._stream_future
-            except asyncio.CancelledError:
-                pass
 
     async def __anext__(self) -> _YieldT:
         await self._yield_semaphore.acquire()
@@ -155,29 +159,27 @@ class CallbackThreadedAsyncIterator(AsyncIteratorContext[_YieldT]):
         if self._done_event.is_set() and self._queue.empty():
             raise StopAsyncIteration
 
-        value, exc = await self._queue.get()
+        value_exc = await self._queue.get()
 
-        if exc is not None:
+        if value_exc[1] is not None:
             # Raise the stored exception exactly where it happened
-            raise exc
-
+            raise value_exc[1]
         # Normal value
-        return value
+        return value_exc[0]
 
     def __callback_threadsafe(self, value: _YieldT) -> None:
         assert self._loop is not None
 
-        def put_value():
+        def put_value() -> None:
             self._queue.put_nowait((value, None))
             self._yield_semaphore.release()
 
         self._loop.call_soon_threadsafe(put_value)
 
     def __callback_threadsafe_with_error(self, exc: BaseException) -> None:
-        # Optionally a separate method or inside callback wrapper:
         assert self._loop is not None
 
-        def put_error():
+        def put_error() -> None:
             self._queue.put_nowait((None, exc))
             self._yield_semaphore.release()
 

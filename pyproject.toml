@@ -7,7 +7,7 @@ name = "athreading"
 version = "0.2.1"
 description = "Asynchronous threading package for Python"
 readme = "README.md"
-requires-python = "^3.9"
+requires-python = ">=3.9"
 license = "BSD-3-Clause"
 authors = [
     { name = "Callan Gray", email = "cal.j.gray@gmail.com" }
@@ -97,4 +97,40 @@ exclude_lines = [
     "pragma: not covered",
     "@overload",
     "if TYPE_CHECKING",
+]
+
+[tool.ruff]
+target-version = "py39"
+line-length = 99
+
+[tool.ruff.lint.isort]
+known-local-folder = ["src"]
+known-first-party = ["realtime.calibration", "tests"]
+known-third-party = ["realtime.receive.core", "realtime.receive.modules", "realtime.receive.processors"]
+
+[tool.ruff.format]
+skip-magic-trailing-comma = true
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "D",  # Docstring
+    "ANN",  # Require annotations
+    "UP",  # Upgrade
+    "S101",  # use of assert
+    "RSE102",  # paren on raise exception
+    "PGH003",  # Use specific rule codes when ignoring type issues
+    "COM812",  # Trailing comma missing
+    "TC001",  # Move application import to type-checking block
+    "TC002",  # Typing only third party import
+    "TC003",  # Move standard library import to type-checking block
+    "TD003",  # Missing issue link for this TODO
+    "FIX002",  # Line contains TODO, consider resolving the issue
+]
+
+[tool.ruff.lint.extend-per-file-ignores]
+"tests/*" = [
+    "PLR",  # magic values
+    "FBT001",  # boolean-typed positional arguments
+    "B011",  # Do not `assert False`
 ]

@@ -3,18 +3,20 @@ import sys
 import time
 from collections.abc import AsyncGenerator, Generator
 from concurrent.futures import ThreadPoolExecutor
+from typing import Union
 
 import pytest
 
 import athreading
 
-if sys.version_info > (3, 10):
+if sys.version_info >= (3, 10):
     from contextlib import nullcontext
 else:
     from tests.compat import nullcontext
 
-TestData = int | str | float | None
+TestData = Union[int, str, float, None]
 TEST_VALUES: list[TestData] = [1, None, "", 2.0]
+
 
 custom_executor = ThreadPoolExecutor()
 

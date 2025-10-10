@@ -12,7 +12,7 @@ from concurrent.futures import ThreadPoolExecutor
 from types import TracebackType
 from typing import Optional, TypeVar, Union
 
-if sys.version_info > (3, 12):
+if sys.version_info >= (3, 12):
     from typing import ParamSpec, overload, override
 else:  # pragma: not covered
     from typing_extensions import ParamSpec, overload, override
@@ -24,7 +24,9 @@ __all__ = ["generate", "ThreadedAsyncGenerator"]
 
 ParamsT = ParamSpec("ParamsT")
 YieldT = TypeVar("YieldT")
+_YieldT_co = TypeVar("_YieldT_co", covariant=True)
 SendT = TypeVar("SendT")
+_SendT_co = TypeVar("_SendT_co", covariant=True)
 
 
 @overload
@@ -33,71 +35,68 @@ def generate(
     *,
     executor: Optional[ThreadPoolExecutor] = None,
 ) -> Callable[
-    [Callable[ParamsT, Generator[YieldT, Optional[SendT], None]]],
-    Callable[ParamsT, AsyncGeneratorContext[YieldT, SendT]],
+    [Callable[ParamsT, Generator[_YieldT_co, _SendT_co, None]]],
+    Callable[ParamsT, AsyncGeneratorContext[_YieldT_co, _SendT_co]],
 ]:
     ...
 
 
 @overload
 def generate(
-    fn: Callable[ParamsT, Generator[YieldT, Optional[SendT], None]],
+    fn: Callable[ParamsT, Generator[_YieldT_co, _SendT_co, None]],
     *,
     executor: Optional[ThreadPoolExecutor] = None,
-) -> Callable[ParamsT, AsyncGeneratorContext[YieldT, SendT]]:
+) -> Callable[ParamsT, AsyncGeneratorContext[_YieldT_co, _SendT_co]]:
     ...
 
 
 def generate(
-    fn: Optional[Callable[ParamsT, Generator[YieldT, Optional[SendT], None]]] = None,
+    fn: Optional[Callable[ParamsT, Generator[_YieldT_co, _SendT_co, None]]] = None,
     *,
     executor: Optional[ThreadPoolExecutor] = None,
 ) -> Union[
-    Callable[ParamsT, AsyncGeneratorContext[YieldT, SendT]],
+    Callable[ParamsT, AsyncGeneratorContext[_YieldT_co, _SendT_co]],
     Callable[
-        [Callable[ParamsT, Generator[YieldT, Optional[SendT], None]]],
-        Callable[ParamsT, AsyncGeneratorContext[YieldT, SendT]],
+        [Callable[ParamsT, Generator[_YieldT_co, _SendT_co, None]]],
+        Callable[ParamsT, AsyncGeneratorContext[_YieldT_co, _SendT_co]],
     ],
 ]:
     """Decorates a thread-safe synchronous generator with a ThreadPoolExecutor and exposes a
     thread-safe async generator.
 
     Args:
-        fn (Callable[ParamsT, Generator[YieldT, Optional[SendT], None]], optional): Function
-        returning a generator. Defaults to None.
+        fn: Function returning a generator. Defaults to None.
         executor (Optional[ThreadPoolExecutor], optional): Defaults to None.
 
     Returns:
-        Callable[ParamsT, ThreadedAsyncGenerator[YieldT, SendT]]: Decorated generator function
-        with lazy argument evaluation.
+        Decorated generator function with lazy argument evaluation.
     """
     if fn is None:
         return _create_generate_decorator(executor=executor)
-    else:
 
-        @functools.wraps(fn)
-        def wrapper(
-            *args: ParamsT.args, **kwargs: ParamsT.kwargs
-        ) -> AsyncGeneratorContext[YieldT, SendT]:
-            return ThreadedAsyncGenerator(fn(*args, **kwargs), executor=executor)
+    @functools.wraps(fn)
+    def wrapper(
+        *args: ParamsT.args, **kwargs: ParamsT.kwargs
+    ) -> AsyncGeneratorContext[_YieldT_co, _SendT_co]:
+        return ThreadedAsyncGenerator(fn(*args, **kwargs), executor=executor)
 
-        return wrapper
+    return wrapper
 
 
 def _create_generate_decorator(
     executor: Optional[ThreadPoolExecutor] = None,
 ) -> Callable[
-    [Callable[ParamsT, Generator[YieldT, Optional[SendT], None]]],
-    Callable[ParamsT, AsyncGeneratorContext[YieldT, SendT]],
+    [Callable[ParamsT, Generator[_YieldT_co, _SendT_co, None]]],
+    Callable[ParamsT, AsyncGeneratorContext[_YieldT_co, _SendT_co]],
 ]:
     def decorator(
-        fn: Callable[ParamsT, Generator[YieldT, Optional[SendT], None]],
-    ) -> Callable[ParamsT, AsyncGeneratorContext[YieldT, SendT]]:
+        fn: Callable[ParamsT, Generator[_YieldT_co, _SendT_co, None]],
+    ) -> Callable[ParamsT, AsyncGeneratorContext[_YieldT_co, _SendT_co]]:
         @functools.wraps(fn)
         def wrapper(
             *args: ParamsT.args, **kwargs: ParamsT.kwargs
-        ) -> AsyncGeneratorContext[YieldT, SendT]:
-            return ThreadedAsyncGenerator(fn(*args, **kwargs), executor)
+        ) -> AsyncGeneratorContext[_YieldT_co, _SendT_co]:
+            return ThreadedAsyncGenerator(fn(*args, **kwargs), executor=executor)
 
         return wrapper
 
@@ -111,15 +110,14 @@ class ThreadedAsyncGenerator(AsyncGeneratorContext[YieldT, SendT]):
 
     def __init__(
         self,
-        generator: Generator[YieldT, Optional[SendT], None],
+        generator: Generator[YieldT, SendT, None],
         executor: Optional[ThreadPoolExecutor] = None,
     ):
         """Initilizes a ThreadedAsyncGenerator from a synchronous generator.
 
         Args:
-            generator (Generator[ItemT, SendT, None]): Synchronous generator.
-            executor (ThreadPoolExecutor, optional): Shared thread pool instance. Defaults to
-            ThreadPoolExecutor().
+            generator: Synchronous generator.
+            executor: Shared thread pool instance. Defaults to ThreadPoolExecutor().
         """
         self._yield_semaphore = asyncio.Semaphore(0)
         self._done_event = threading.Event()
@@ -143,6 +141,7 @@ class ThreadedAsyncGenerator(AsyncGeneratorContext[YieldT, SendT]):
         __exc_type: Optional[type[BaseException]],
         __val: Optional[BaseException],
         __tb: Optional[TracebackType],
+        /,
     ) -> None:
         # move to aclose
         assert self._stream_future is not None
@@ -182,6 +181,7 @@ class ThreadedAsyncGenerator(AsyncGeneratorContext[YieldT, SendT]):
         __typ: Union[type[BaseException], BaseException],
         __val: object = None,
         __tb: Optional[TracebackType] = None,
+        /,
     ) -> YieldT:
         """Raise a custom exception immediately from the generator"""
         if isinstance(__typ, BaseException):
@@ -195,7 +195,7 @@ class ThreadedAsyncGenerator(AsyncGeneratorContext[YieldT, SendT]):
                 sent = self._send_queue.get()
                 if not self._done_event.is_set():
                     try:
-                        item = self._generator.send(sent)
+                        item = self._generator.send(sent)  # type: ignore
                         self._yield_queue.put(item)
                         self._loop.call_soon_threadsafe(self._yield_semaphore.release)
                     except StopIteration:
