@@ -154,7 +154,11 @@ async def test_iterate_all_parallel(streamcontext):
         "generate",
     ],
 )
-@pytest.mark.parametrize("buffer_maxsize", [None, 1, 2, 3, 5, 6])
+@pytest.mark.parametrize("buffer_maxsize", [None, 1, 2, 3, 4, 5, 6])
+@pytest.mark.xfail(
+    sys.platform == "win32" and sys.version_info <= (3, 12),
+    reason="Queue threading.Condition slower on Windows CPython",
+)
 @pytest.mark.asyncio
 async def test_iterate_buffer_maxsize(streamcontext, buffer_maxsize: int | None):
     """test background worker stops at the buffer maxsize
@@ -174,7 +178,7 @@ async def test_iterate_buffer_maxsize(streamcontext, buffer_maxsize: int | None)
         else buffer_maxsize
     )
 
-    worker_time_s = 0.005
+    worker_time_s = 0.1
     await asyncio.sleep(worker_time_s)
     async with async_timeout.timeout(1.0):
         await ctx.__aexit__(None, None, None)
