@@ -12,7 +12,7 @@ import pytest
 import athreading
 from athreading.callback_iterator import CallbackThreadedAsyncIterator
 
-if sys.version_info > (3, 10):
+if sys.version_info >= (3, 11):
     from contextlib import nullcontext
 else:
     from tests.compat import nullcontext
