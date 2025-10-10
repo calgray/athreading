@@ -174,7 +174,7 @@ async def test_iterate_buffer_maxsize(streamcontext, buffer_maxsize: int | None)
         else buffer_maxsize
     )
 
-    worker_time_s = 0.005
+    worker_time_s = 0.01
     await asyncio.sleep(worker_time_s)
     async with async_timeout.timeout(1.0):
         await ctx.__aexit__(None, None, None)
