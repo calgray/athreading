@@ -18,7 +18,7 @@ jobs:
     - name: Install Poetry
       uses: abatilo/actions-poetry@v4.0.0
       with:
-        poetry-version: 2.0.1
+        poetry-version: 2.2.1
 
     - name: Setup Poetry
       if: runner.os == 'macOS'
@@ -43,7 +43,7 @@ jobs:
       - name: Install Poetry
         uses: abatilo/actions-poetry@v4.0.0
         with:
-          poetry-version: 2.0.1
+          poetry-version: 2.2.1
       - name: Install dependencies
         run: poetry install
       - uses: pre-commit/action@v3.0.1
@@ -72,7 +72,7 @@ jobs:
     - name: Install Poetry
       uses: abatilo/actions-poetry@v4.0.0
       with:
-        poetry-version: 2.0.1
+        poetry-version: 2.2.1
 
     - name: Install dependencies
       run: poetry install

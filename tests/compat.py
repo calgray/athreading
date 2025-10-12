@@ -1,10 +1,7 @@
 from contextlib import AbstractAsyncContextManager, AbstractContextManager
-from typing import TypeVar
-
-T = TypeVar("T")
 
 
-class nullcontext(AbstractContextManager[T], AbstractAsyncContextManager[T]):
+class nullcontext(AbstractContextManager, AbstractAsyncContextManager):  # type: ignore
     """Context manager that does no additional processing.
 
     Used as a stand-in for a normal context manager, when a particular
@@ -21,11 +18,11 @@ class nullcontext(AbstractContextManager[T], AbstractAsyncContextManager[T]):
     def __enter__(self):
         return self.enter_result
 
-    def __exit__(self, *excinfo):
+    def __exit__(self, *excinfo) -> None:
         pass
 
     async def __aenter__(self):
         return self.enter_result
 
-    async def __aexit__(self, *excinfo):
+    async def __aexit__(self, *excinfo) -> None:
         pass

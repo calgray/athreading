@@ -19,11 +19,11 @@ def asquare(x: float, delay: float = 0.0) -> float:
 
 
 def test_square():
-    assert 4 == square(2)
-    assert 4 == square(2, 0.5)
+    assert square(2) == 4
+    assert square(2, 0.5) == 4
 
 
 @pytest.mark.asyncio
 async def test_asquare():
-    assert 4 == await asquare(2)
-    assert 4 == await asquare(2, delay=0.5)
+    assert await asquare(2) == 4
+    assert await asquare(2, delay=0.5) == 4
