@@ -14,6 +14,7 @@ repos:
     rev: v0.1.0
     hooks:
     - id: pyright-pretty
+      entry: poetry run pyright-pretty
   - repo: https://github.com/PyCQA/autoflake
     rev: v2.2.1
     hooks:
@@ -37,8 +38,15 @@ repos:
     rev: "v1.5.1"
     hooks:
       - id: mypy
+        additional_dependencies:
+          - pytest-mypy
   - repo: https://github.com/igorshubovych/markdownlint-cli
     rev: v0.37.0
     hooks:
       - id: markdownlint
         args: ["--disable", "MD013", "--"]
+  - repo: https://github.com/tcort/markdown-link-check
+    rev: v3.13.7
+    hooks:
+      - id: markdown-link-check
+        args: [-q]

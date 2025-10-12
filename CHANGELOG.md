@@ -1,10 +1,11 @@
-# Version History
+# Changelog
 
 ## Unreleased
 
 ### Added
 
 * Added `iterate_callback` and `single_callback` higher order function decorators.
+* Added `buffer_maxsize` to `iterate` and `generate`.
 
 ## 0.2.1
 

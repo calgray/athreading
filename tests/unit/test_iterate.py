@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import sys
 import time
@@ -5,6 +7,7 @@ from collections.abc import AsyncGenerator, Generator
 from concurrent.futures import ThreadPoolExecutor
 from typing import Union
 
+import async_timeout
 import pytest
 
 import athreading
@@ -17,11 +20,10 @@ else:
 TestData = Union[int, str, float, None]
 TEST_VALUES: list[TestData] = [1, None, "", 2.0]
 
+CUSTOM_EXECUTOR = ThreadPoolExecutor()
 
-custom_executor = ThreadPoolExecutor()
 
-
-def generator(delay=0.0, repeats=1) -> Generator[TestData, None, None]:
+def generator(delay=0.0, repeats=1) -> Generator[TestData, TestData | None, None]:
     for _ in range(repeats):
         for item in TEST_VALUES:
             time.sleep(delay)
@@ -34,7 +36,7 @@ async def agenerate_naive(delay=0.0, repeats=1) -> AsyncGenerator[TestData, None
         await asyncio.sleep(0.0)
 
 
-@athreading.iterate(executor=custom_executor)
+@athreading.iterate(executor=CUSTOM_EXECUTOR)
 def aiterate(delay=0.0, repeats=1):
     yield from generator(delay, repeats)
 
@@ -49,7 +51,7 @@ def aiterate_simplest(delay=0.0, repeats=1):
     yield from generator(delay, repeats)
 
 
-@athreading.generate(executor=custom_executor)
+@athreading.generate(executor=CUSTOM_EXECUTOR)
 def agenerate(delay=0.0, repeats=1):
     yield from generator(delay, repeats)
 
@@ -96,7 +98,7 @@ async def test_iterate_all(streamcontext, worker_delay, main_delay):
     output = []
     async with streamcontext(worker_delay) as stream:
         async for v in stream:
-            time.sleep(main_delay)
+            await asyncio.sleep(main_delay)
             output.append(v)
     assert output == TEST_VALUES
     await asyncio.wait_for(asyncio.get_running_loop().shutdown_default_executor(), 1.0)
@@ -121,8 +123,7 @@ async def test_iterate_all_parallel(streamcontext):
     async def process():
         outputs = []
         async with streamcontext(worker_delay, executor) as stream:
-            async for value in stream:
-                outputs.append(value)
+            outputs = [value async for value in stream]
         assert outputs == TEST_VALUES
 
     # set timeout between thread time and total thread time to ensure
@@ -132,7 +133,57 @@ async def test_iterate_all_parallel(streamcontext):
     timeout = thread_time + 0.5 * (total_thread_time - thread_time)
 
     await asyncio.wait_for(
-        asyncio.gather(*[process() for i in range(max_workers)]),
+        asyncio.gather(*[process() for _ in range(max_workers)]),
         timeout=timeout,
     )
+    await asyncio.wait_for(asyncio.get_running_loop().shutdown_default_executor(), 1.0)
+
+
+@pytest.mark.parametrize(
+    "streamcontext",
+    [
+        lambda buffer_maxsize: athreading.iterate(
+            generator, buffer_maxsize=buffer_maxsize
+        )(),
+        lambda buffer_maxsize: athreading.generate(
+            generator, buffer_maxsize=buffer_maxsize
+        )(),
+    ],
+    ids=[
+        "iterate",
+        "generate",
+    ],
+)
+@pytest.mark.parametrize("buffer_maxsize", [None, 1, 2, 3, 4, 5, 6])
+@pytest.mark.xfail(
+    sys.platform == "win32" and sys.version_info <= (3, 12),
+    reason="Queue threading.Condition slower on Windows CPython",
+)
+@pytest.mark.asyncio
+async def test_iterate_buffer_maxsize(streamcontext, buffer_maxsize: int | None):
+    """test background worker stops at the buffer maxsize
+
+    Args:
+        streamcontext: athreading iterator.
+        buffer_maxsize: max amount of buffering whilest the iterator isn't started
+    """
+
+    ctx = streamcontext(buffer_maxsize)
+    stream = await ctx.__aenter__()
+
+    # NOTE: AsyncGenerator with None performs no priming
+    expected_len = (
+        0
+        if buffer_maxsize is None and isinstance(stream, AsyncGenerator)
+        else buffer_maxsize
+    )
+
+    worker_time_s = 0.1
+    await asyncio.sleep(worker_time_s)
+    async with async_timeout.timeout(1.0):
+        await ctx.__aexit__(None, None, None)
+
+    output = [value async for value in stream]
+
+    assert output == TEST_VALUES[:expected_len]
     await asyncio.wait_for(asyncio.get_running_loop().shutdown_default_executor(), 1.0)

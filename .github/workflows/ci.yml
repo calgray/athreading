@@ -1,24 +1,7 @@
 name: test
 on: [push, workflow_call]
 jobs:
-  qa:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pre-commit/action@v3.0.1
-
-  check-links:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: gaurav-nelson/github-action-markdown-link-check@v1
-        name: Check links in markdown files
-        with:
-          use-quiet-mode: 'yes'
-          use-verbose-mode: 'yes'
-
   test:
-    needs: qa
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -27,15 +10,15 @@ jobs:
         python-version: [ "3.9", "3.11", "3.13" ]
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
 
     - name: Install Poetry
-      uses: abatilo/actions-poetry@v3.0.1
+      uses: abatilo/actions-poetry@v4.0.0
       with:
-        poetry-version: 1.2.2
+        poetry-version: 2.2.1
 
     - name: Setup Poetry
       if: runner.os == 'macOS'
@@ -45,28 +28,51 @@ jobs:
       run: poetry install
 
     - name: Run tests
-      run: poetry run pytest --mypy --cov-branch --cov-report=xml
+      run: poetry run pytest --mypy --cov-branch --cov=athreading --cov-report=xml
 
     - name: Upload coverage reports to Codecov
-      if: ${{ (matrix.os == 'ubuntu-latest') && (matrix.python-version == '3.13') }}
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v5.4.2
       with:
+        env_vars: RUNNER_OS,PYTHON_VERSION
         token: ${{ secrets.CODECOV_TOKEN }}
 
+  qa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install Poetry
+        uses: abatilo/actions-poetry@v4.0.0
+        with:
+          poetry-version: 2.2.1
+      - name: Install dependencies
+        run: poetry install
+      - uses: pre-commit/action@v3.0.1
+
+  check-links:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: gaurav-nelson/github-action-markdown-link-check@v1
+        name: Check links in markdown files
+        with:
+          use-quiet-mode: 'yes'
+          use-verbose-mode: 'yes'
+
+
   benchmark:
-    needs: qa
+    needs: [test, qa]
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - uses: actions/setup-python@v5
       with:
         python-version: 3.13
 
     - name: Install Poetry
-      uses: abatilo/actions-poetry@v3.0.1
+      uses: abatilo/actions-poetry@v4.0.0
       with:
-        poetry-version: 1.2.2
+        poetry-version: 2.2.1
 
     - name: Install dependencies
       run: poetry install
