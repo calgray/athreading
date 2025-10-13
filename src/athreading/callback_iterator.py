@@ -50,7 +50,7 @@ def iterate_callback(
     ...
 
 
-def iterate_callback(  # type: ignore[misc]
+def iterate_callback(
     fn: Optional[CallableWithCallback[_YieldT_co, _ParamsT]] = None,
     *,
     executor: Optional[ThreadPoolExecutor] = None,
@@ -73,7 +73,7 @@ def iterate_callback(  # type: ignore[misc]
         Decorated iterator function with lazy argument evaluation.
     """
     if fn is None:
-        return _create_iterate_decorator(executor=executor)  # type: ignore[return-value]
+        return _create_iterate_decorator(executor=executor)
     else:
 
         @functools.wraps(fn)
@@ -106,7 +106,7 @@ def _create_iterate_decorator(
 
         return wrapper
 
-    return decorator  # type: ignore[return-value]
+    return decorator
 
 
 class CallbackThreadedAsyncIterator(AsyncIteratorContext[_YieldT]):

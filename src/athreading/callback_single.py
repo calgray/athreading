@@ -45,7 +45,7 @@ def single_callback(
     ...
 
 
-def single_callback(  # type: ignore[misc]
+def single_callback(
     fn: Optional[CallableWithCallback[_T_co, _ParamsT]] = None,
     *,
     executor: Optional[ThreadPoolExecutor] = None,
