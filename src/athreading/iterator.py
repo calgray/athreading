@@ -22,8 +22,8 @@ if TYPE_CHECKING:
     from types import TracebackType
 
 
-ParamsT = ParamSpec("ParamsT")
-YieldT = TypeVar("YieldT")
+_ParamsT = ParamSpec("_ParamsT")
+_YieldT = TypeVar("_YieldT")
 
 
 @overload
@@ -33,32 +33,32 @@ def iterate(
     buffer_maxsize: Optional[int] = None,
     executor: Optional[ThreadPoolExecutor] = None,
 ) -> Callable[
-    [Callable[ParamsT, Iterator[YieldT]]],
-    Callable[ParamsT, AsyncIteratorContext[YieldT]],
+    [Callable[_ParamsT, Iterator[_YieldT]]],
+    Callable[_ParamsT, AsyncIteratorContext[_YieldT]],
 ]:
     ...
 
 
 @overload
 def iterate(
-    fn: Callable[ParamsT, Iterator[YieldT]],
+    fn: Callable[_ParamsT, Iterator[_YieldT]],
     *,
     buffer_maxsize: Optional[int] = None,
     executor: Optional[ThreadPoolExecutor] = None,
-) -> Callable[ParamsT, AsyncIteratorContext[YieldT]]:
+) -> Callable[_ParamsT, AsyncIteratorContext[_YieldT]]:
     ...
 
 
 def iterate(
-    fn: Optional[Callable[ParamsT, Iterator[YieldT]]] = None,
+    fn: Optional[Callable[_ParamsT, Iterator[_YieldT]]] = None,
     *,
     buffer_maxsize: Optional[int] = None,
     executor: Optional[ThreadPoolExecutor] = None,
 ) -> Union[
-    Callable[ParamsT, AsyncIteratorContext[YieldT]],
+    Callable[_ParamsT, AsyncIteratorContext[_YieldT]],
     Callable[
-        [Callable[ParamsT, Iterator[YieldT]]],
-        Callable[ParamsT, AsyncIteratorContext[YieldT]],
+        [Callable[_ParamsT, Iterator[_YieldT]]],
+        Callable[_ParamsT, AsyncIteratorContext[_YieldT]],
     ],
 ]:
     """Decorates a thread-safe iterator with a ThreadPoolExecutor and exposes a thread-safe
@@ -78,8 +78,8 @@ def iterate(
 
     @functools.wraps(fn)
     def wrapper(
-        *args: ParamsT.args, **kwargs: ParamsT.kwargs
-    ) -> AsyncIteratorContext[YieldT]:
+        *args: _ParamsT.args, **kwargs: _ParamsT.kwargs
+    ) -> AsyncIteratorContext[_YieldT]:
         return ThreadedAsyncIterator(
             fn(*args, **kwargs), buffer_maxsize=buffer_maxsize, executor=executor
         )
@@ -91,16 +91,16 @@ def _create_iterate_decorator(
     buffer_maxsize: Optional[int] = None,
     executor: Optional[ThreadPoolExecutor] = None,
 ) -> Callable[
-    [Callable[ParamsT, Iterator[YieldT]]],
-    Callable[ParamsT, AsyncIteratorContext[YieldT]],
+    [Callable[_ParamsT, Iterator[_YieldT]]],
+    Callable[_ParamsT, AsyncIteratorContext[_YieldT]],
 ]:
     def decorator(
-        fn: Callable[ParamsT, Iterator[YieldT]],
-    ) -> Callable[ParamsT, AsyncIteratorContext[YieldT]]:
+        fn: Callable[_ParamsT, Iterator[_YieldT]],
+    ) -> Callable[_ParamsT, AsyncIteratorContext[_YieldT]]:
         @functools.wraps(fn)
         def wrapper(
-            *args: ParamsT.args, **kwargs: ParamsT.kwargs
-        ) -> AsyncIteratorContext[YieldT]:
+            *args: _ParamsT.args, **kwargs: _ParamsT.kwargs
+        ) -> AsyncIteratorContext[_YieldT]:
             return ThreadedAsyncIterator(
                 fn(*args, **kwargs), buffer_maxsize, executor=executor
             )
@@ -110,12 +110,12 @@ def _create_iterate_decorator(
     return decorator
 
 
-class ThreadedAsyncIterator(AsyncIteratorContext[YieldT]):
+class ThreadedAsyncIterator(AsyncIteratorContext[_YieldT]):
     """Wraps a synchronous iterator with an executor and exposes an AsyncIteratorContext."""
 
     def __init__(
         self,
-        iterator: Iterator[YieldT],
+        iterator: Iterator[_YieldT],
         buffer_maxsize: Optional[int] = None,
         executor: Optional[ThreadPoolExecutor] = None,
     ):
@@ -129,13 +129,13 @@ class ThreadedAsyncIterator(AsyncIteratorContext[YieldT]):
         """
         self._yield_semaphore = asyncio.Semaphore(0)
         self._done_event = threading.Event()
-        self._queue: queue.Queue[YieldT] = queue.Queue(buffer_maxsize or 0)
+        self._queue: queue.Queue[_YieldT] = queue.Queue(buffer_maxsize or 0)
         self._iterator = iterator
         self._executor = executor
         self._worker_future: Optional[asyncio.Future[None]] = None
 
     @override
-    async def __aenter__(self) -> ThreadedAsyncIterator[YieldT]:
+    async def __aenter__(self) -> ThreadedAsyncIterator[_YieldT]:
         self._loop = asyncio.get_running_loop()
         self._worker_future = self._loop.run_in_executor(
             self._executor, self.__worker_threadsafe
@@ -155,7 +155,7 @@ class ThreadedAsyncIterator(AsyncIteratorContext[YieldT]):
         self._yield_semaphore.release()
         await self._worker_future
 
-    async def __anext__(self) -> YieldT:
+    async def __anext__(self) -> _YieldT:
         assert (
             self._worker_future is not None
         ), "Iteration started before entering context"
