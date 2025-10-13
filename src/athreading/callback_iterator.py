@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Optional, TypeVar, Union
 
 from athreading.aliases import AsyncIteratorContext
 
-if sys.version_info >= (3, 11):
+if sys.version_info >= (3, 12):
     from typing import Concatenate, ParamSpec, overload
 else:  # pragma: not covered
     from typing_extensions import Concatenate, ParamSpec, overload
