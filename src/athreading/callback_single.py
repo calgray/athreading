@@ -26,12 +26,9 @@ CallableWithCallback = Callable[Concatenate[Callable[[_T_co], None], _ParamsT], 
 
 @overload
 def single_callback(
-    fn: None = None,
-    *,
-    executor: Optional[ThreadPoolExecutor] = None,
+    fn: None = None, *, executor: Optional[ThreadPoolExecutor] = None
 ) -> Callable[
-    [CallableWithCallback[_T_co, _ParamsT]],
-    Callable[_ParamsT, Awaitable[_T_co]],
+    [CallableWithCallback[_T_co, _ParamsT]], Callable[_ParamsT, Awaitable[_T_co]]
 ]:
     ...
 
@@ -52,8 +49,7 @@ def single_callback(
 ) -> Union[
     Callable[_ParamsT, Awaitable[_T_co]],
     Callable[
-        [CallableWithCallback[_T_co, _ParamsT]],
-        Callable[_ParamsT, Awaitable[_T_co]],
+        [CallableWithCallback[_T_co, _ParamsT]], Callable[_ParamsT, Awaitable[_T_co]]
     ],
 ]:
     """Decorates a callback based generator with a ThreadPoolExecutor and exposes a thread-safe
@@ -69,7 +65,7 @@ def single_callback(
     if fn is None:
 
         def decorator(
-            f: CallableWithCallback[_T_co, _ParamsT]
+            f: CallableWithCallback[_T_co, _ParamsT],
         ) -> Callable[_ParamsT, Awaitable[_T_co]]:
             @functools.wraps(f)
             def wrapper(
@@ -110,15 +106,10 @@ def await_callback(
             if not fut.done():
                 fut.set_result(value)
 
-        if executor is None:
+        def run() -> None:
             fn(callback, *args, **kwargs)
-        else:
 
-            def run() -> None:
-                fn(callback, *args, **kwargs)
-
-            loop.run_in_executor(executor, run)
-
+        await loop.run_in_executor(executor, run)
         return await fut
 
     return wrapper
