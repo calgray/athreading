@@ -16,8 +16,9 @@
 ## Features
 
 - **`@athreading.call`**: Adapts a synchronous function into an asynchronous function.
+- **`@athreading.iterate_callback`**: Adapts a synchronous function using a callback **(push-based stream)** into an asynchronous iterator.
 - **`@athreading.iterate`**: Adapts a synchronous iterator **(pull-based stream)** into an asynchronous iterator.
-- **`@athreading.generate`**: Adapts a synchronous generator **(push-and-pull-based stream)** into an asynchronous generator.
+- **`@athreading.generate`**: Adapts a synchronous generator **(pull-driven stream)** into an asynchronous generator.
 
 > [!NOTE]
 > Due to Python's Global Interpreter Lock (GIL), this library does not provide multi-threaded CPU parallelism unless using Python 3.9 with `nogil` or Python 3.13 with free threading enabled.
@@ -64,7 +65,41 @@ The `@athreading.call` decorator transforms a synchronous function into an async
 
 In this example, `compute_sqrt` is a synchronous function that sleeps for 0.5 seconds to simulate a blocking I/O operation. By decorating it with `@athreading.call`, it can be awaited within an asynchronous context, allowing multiple calls to run concurrently without blocking the event loop.
 
-### 2. Adapt a synchronous iterator (pull-based stream)
+### 2. Adapt a synchronous function with callback (push-based stream)
+
+The `@athreading.iterate_callback` decorator transforms a synchronous function using a callback into an asynchronous iterator.
+
+```python
+>>> import athreading
+>>> import time
+>>> import datetime
+>>> import asyncio
+>>>
+>>> @athreading.iterate_callback
+... def time_generator(callback, n):
+...     for value in range(n):
+...         time.sleep(0.05)  # Simulate a blocking I/O operation
+...         callback(value)
+...
+>>> async def aprint_stream(label):
+...     async with time_generator(n=10) as stream:
+...         async for current_time in stream:
+...             print(f"{label}: {current_time}")
+...
+>>> async def amain():
+...
+...     await asyncio.gather(
+...         aprint_stream("Stream 1"),
+...         aprint_stream("Stream 2"),
+...         aprint_stream("Stream 3"),
+...     )
+...
+>>> asyncio.run(amain())  # doctest: +ELLIPSIS
+Stream ...
+
+```
+
+### 3. Adapt a synchronous iterator (pull-based stream)
 
 The `@athreading.iterate` decorator transforms a synchronous iterator into an asynchronous iterator.
 
@@ -99,7 +134,7 @@ Stream ...
 
 This example demonstrates running three asynchronous streams concurrently. Each stream processes the `time_generator` function independently, and the decorator ensures iteration occurs without blocking the event loop.
 
-### 3. Adapt a synchronous generator (driveable push-based stream)
+### 4. Adapt a synchronous generator (push-and-pull-based stream)
 
 The `@athreading.generate` decorator converts a synchronous generator function into an asynchronous generator function that supports `asend`.
 
@@ -107,7 +142,7 @@ The `@athreading.generate` decorator converts a synchronous generator function i
 >>> import athreading
 >>> import time
 >>> import asyncio
->>> 
+>>>
 >>> @athreading.generate
 ... def controlled_counter(start, step):
 ...     current = start
