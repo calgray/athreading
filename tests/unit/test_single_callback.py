@@ -15,19 +15,52 @@ def run_with_callback(callback: Callable[[int], None], interval: float = 0.01) -
     callback(1)
 
 
+async def arun_naive():
+    output = []
+    run_with_callback(output.append)
+    return output[0]
+
+
 @athreading.single_callback(executor=executor)
 def arun(callback: Callable[[int], None]) -> None:
     run_with_callback(callback, interval=0.1)
 
 
-def test_callback_run():
+@athreading.single_callback()
+def arun_simpler(callback: Callable[[int], None]) -> None:
+    run_with_callback(callback, interval=0.1)
+
+
+@athreading.single_callback
+def arun_simplest(callback: Callable[[int], None]) -> None:
+    run_with_callback(callback, interval=0.1)
+
+
+def test_run_with_callback():
     outputs = []
     run_with_callback(outputs.append)
     assert outputs == [1]
 
 
+@pytest.mark.parametrize(
+    "awaitable",
+    [
+        arun_naive,
+        arun,
+        arun_simpler,
+        arun_simplest,
+    ],
+    ids=[
+        "naive",
+        "arun",
+        "arun_simpler",
+        "arun_simplest",
+    ],
+)
 @pytest.mark.asyncio
-async def test_acallback_run():
+async def test_arun(awaitable):
     outputs = []
-    outputs.append(await arun())
+    outputs.append(await awaitable())
     assert outputs == [1]
+    outputs.append(await awaitable())
+    assert outputs == [1, 1]

@@ -18,7 +18,7 @@
 - **`@athreading.call`**: Adapts a synchronous function into an asynchronous function.
 - **`@athreading.iterate_callback`**: Adapts a synchronous function using a callback **(push-based stream)** into an asynchronous iterator.
 - **`@athreading.iterate`**: Adapts a synchronous iterator **(pull-based stream)** into an asynchronous iterator.
-- **`@athreading.generate`**: Adapts a synchronous generator **(push-and-pull-based stream)** into an asynchronous generator.
+- **`@athreading.generate`**: Adapts a synchronous generator **(pull-driven stream)** into an asynchronous generator.
 
 > [!NOTE]
 > Due to Python's Global Interpreter Lock (GIL), this library does not provide multi-threaded CPU parallelism unless using Python 3.9 with `nogil` or Python 3.13 with free threading enabled.

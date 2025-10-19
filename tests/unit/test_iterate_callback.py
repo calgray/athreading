@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import functools
 import sys
@@ -26,37 +28,48 @@ custom_executor = ThreadPoolExecutor()
 
 
 def iterate_with_callback(
-    callback: Callable[[TestData], None], delay=0.0, repeats=1
+    callback: Callable[[TestData], None], delay=0.0, exc_idx: int | None = None
 ) -> None:
-    for _ in range(repeats):
-        for item in TEST_VALUES:
-            time.sleep(delay)
-            callback(item)
+    """Create an iterator over test values.
+
+    Args:
+        callback: output callback.
+        delay: delay between yields. Defaults to 0.0.
+        exc_idx: elemetn to raise exception at. Defaults to None.
+
+    Raises:
+        ValueError: _description_
+    """
+    for idx, item in enumerate(TEST_VALUES):
+        time.sleep(delay)
+        if idx == exc_idx:
+            raise ValueError(item)
+        callback(item)
 
 
-async def agenerate_naive(delay=0.0, repeats=1) -> AsyncGenerator[TestData, None]:
+async def agenerate_naive(delay=0.0, exc_idx=None) -> AsyncGenerator[TestData, None]:
     """Naive conversion to async generator. Generator blocks the
     io loop resulting in poor performance."""
     q = Queue[TestData]()
-    iterate_with_callback(q.put, delay, repeats)
+    iterate_with_callback(q.put, delay, exc_idx)
     while not q.empty():
         yield q.get()
         await asyncio.sleep(0.0)
 
 
 @athreading.iterate_callback(executor=custom_executor)
-def aiterate(callback: Callable[[TestData], None], delay=0.0, repeats=1):
-    iterate_with_callback(callback, delay, repeats)
+def aiterate(callback: Callable[[TestData], None], delay=0.0, exc_idx=None):
+    iterate_with_callback(callback, delay, exc_idx)
 
 
 @athreading.iterate_callback()
-def aiterate_simpler(callback: Callable[[TestData], None], delay=0.0, repeats=1):
-    iterate_with_callback(callback, delay, repeats)
+def aiterate_simpler(callback: Callable[[TestData], None], delay=0.0, exc_idx=None):
+    iterate_with_callback(callback, delay, exc_idx)
 
 
 @athreading.iterate_callback
-def aiterate_simplest(callback: Callable[[TestData], None], delay=0.0, repeats=1):
-    iterate_with_callback(callback, delay, repeats)
+def aiterate_simplest(callback: Callable[[TestData], None], delay=0.0, exc_idx=None):
+    iterate_with_callback(callback, delay, exc_idx)
 
 
 @pytest.mark.parametrize("worker_delay", [0.0, 0.1])
@@ -75,7 +88,7 @@ def aiterate_simplest(callback: Callable[[TestData], None], delay=0.0, repeats=1
     ],
     ids=[
         "naive",
-        "iterator_constructor",
+        "aiterator",
         "iterate",
         "aiterate",
         "aiterate_simpler",
@@ -83,7 +96,7 @@ def aiterate_simplest(callback: Callable[[TestData], None], delay=0.0, repeats=1
     ],
 )
 @pytest.mark.asyncio
-async def test_callback_iterate_all(streamcontext, worker_delay, main_delay):
+async def test_callback_iterate(streamcontext, worker_delay, main_delay):
     output = []
     async with streamcontext(worker_delay) as stream:
         async for v in stream:
@@ -96,7 +109,7 @@ async def test_callback_iterate_all(streamcontext, worker_delay, main_delay):
 @pytest.mark.parametrize(
     "streamcontext",
     [
-        lambda delay, e: CallbackThreadedAsyncIterator(
+        lambda delay, _: CallbackThreadedAsyncIterator(
             functools.partial(iterate_with_callback, delay=delay)
         ),
         lambda delay, e: athreading.iterate_callback(iterate_with_callback, executor=e)(
@@ -109,7 +122,7 @@ async def test_callback_iterate_all(streamcontext, worker_delay, main_delay):
     ids=["iterator_constructor", "iterate", "iterate_lazy"],
 )
 @pytest.mark.asyncio
-async def test_callback_iterate_all_parallel(streamcontext):
+async def test_callback_iterate_parallel(streamcontext):
     max_workers = 8
     worker_delay = 1.0
     executor = ThreadPoolExecutor(max_workers=max_workers)
@@ -132,3 +145,21 @@ async def test_callback_iterate_all_parallel(streamcontext):
         timeout=timeout,
     )
     await asyncio.wait_for(asyncio.get_running_loop().shutdown_default_executor(), 1.0)
+
+
+@pytest.mark.asyncio
+async def test_callback_iterate_exception():
+    yielded = []
+
+    with pytest.raises(ValueError):
+        async with aiterate_simplest(0, 3) as istream:
+            yielded.extend([res async for res in istream])
+
+    assert yielded == []
+
+    with pytest.raises(ValueError):  # noqa: PT012
+        async with aiterate_simplest(0, 3) as istream:
+            async for res in istream:
+                yielded.append(res)  # noqa: PERF401
+
+    assert yielded == TEST_VALUES[:3]

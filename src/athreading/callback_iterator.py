@@ -162,9 +162,7 @@ class CallbackThreadedAsyncIterator(AsyncIteratorContext[_YieldT]):
         value_exc = await self._queue.get()
 
         if value_exc[1] is not None:
-            # Raise the stored exception exactly where it happened
             raise value_exc[1]
-        # Normal value
         return value_exc[0]
 
     def __callback_threadsafe(self, value: _YieldT) -> None:
