@@ -31,7 +31,7 @@ jobs:
       run: poetry run pytest --mypy --cov-branch --cov=athreading --cov-report=xml
 
     - name: Upload coverage reports to Codecov
-      uses: codecov/codecov-action@v5.4.2
+      uses: codecov/codecov-action@v5.5.1
       with:
         env_vars: RUNNER_OS,PYTHON_VERSION
         token: ${{ secrets.CODECOV_TOKEN }}
