@@ -10,7 +10,7 @@ jobs:
         python-version: [ "3.9", "3.11", "3.13" ]
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
     - uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
@@ -39,7 +39,7 @@ jobs:
   qa:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Install Poetry
         uses: abatilo/actions-poetry@v4.0.0
         with:
@@ -51,7 +51,7 @@ jobs:
   check-links:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: gaurav-nelson/github-action-markdown-link-check@v1
         name: Check links in markdown files
         with:
@@ -64,7 +64,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
     - uses: actions/setup-python@v5
       with:
         python-version: 3.13
