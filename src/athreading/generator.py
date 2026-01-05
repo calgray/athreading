@@ -76,18 +76,26 @@ def generate(
     Returns:
         Decorated generator function with lazy argument evaluation.
     """
-    if fn is None:
-        return _create_generate_decorator(
-            buffer_maxsize=buffer_maxsize, executor=executor
+    return (
+        _create_generate_decorator(buffer_maxsize=buffer_maxsize, executor=executor)
+        if fn is None
+        else _create_generate_wrapper(
+            fn, buffer_maxsize=buffer_maxsize, executor=executor
         )
+    )
 
+
+def _create_generate_wrapper(
+    fn: Callable[_ParamsT, Generator[_YieldT_co, _SendT_co, None]],
+    *,
+    buffer_maxsize: Optional[int],
+    executor: Optional[ThreadPoolExecutor],
+) -> Callable[_ParamsT, AsyncGeneratorContext[_YieldT_co, _SendT_co]]:
     @functools.wraps(fn)
     def wrapper(
         *args: _ParamsT.args, **kwargs: _ParamsT.kwargs
     ) -> AsyncGeneratorContext[_YieldT_co, _SendT_co]:
-        return ThreadedAsyncGenerator(
-            fn(*args, **kwargs), buffer_maxsize=buffer_maxsize, executor=executor
-        )
+        return ThreadedAsyncGenerator(fn(*args, **kwargs), buffer_maxsize, executor)
 
     return wrapper
 
@@ -102,13 +110,9 @@ def _create_generate_decorator(
     def decorator(
         fn: Callable[_ParamsT, Generator[_YieldT_co, _SendT_co, None]],
     ) -> Callable[_ParamsT, AsyncGeneratorContext[_YieldT_co, _SendT_co]]:
-        @functools.wraps(fn)
-        def wrapper(
-            *args: _ParamsT.args, **kwargs: _ParamsT.kwargs
-        ) -> AsyncGeneratorContext[_YieldT_co, _SendT_co]:
-            return ThreadedAsyncGenerator(fn(*args, **kwargs), buffer_maxsize, executor)
-
-        return wrapper
+        return _create_generate_wrapper(
+            fn, buffer_maxsize=buffer_maxsize, executor=executor
+        )
 
     return decorator
 

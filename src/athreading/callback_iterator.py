@@ -72,23 +72,32 @@ def iterate_callback(
     Returns:
         Decorated iterator function with lazy argument evaluation.
     """
-    if fn is None:
-        return _create_iterate_decorator(executor=executor)
-    else:
+    return (
+        _create_iterate_decorator(executor=executor)
+        if fn is None
+        else _create_iterate_wrapper(fn, executor=executor)
+    )
 
-        @functools.wraps(fn)
-        def wrapper(
-            *args: _ParamsT.args, **kwargs: _ParamsT.kwargs
-        ) -> AsyncIteratorContext[_YieldT_co]:
-            return CallbackThreadedAsyncIterator(
-                lambda callback: fn(callback, *args, **kwargs), executor=executor
-            )
 
-        return wrapper
+def _create_iterate_wrapper(
+    fn: CallableWithCallback[_YieldT_co, _ParamsT],
+    *,
+    executor: Optional[ThreadPoolExecutor],
+) -> Callable[_ParamsT, AsyncIteratorContext[_YieldT_co]]:
+    @functools.wraps(fn)
+    def wrapper(
+        *args: _ParamsT.args, **kwargs: _ParamsT.kwargs
+    ) -> AsyncIteratorContext[_YieldT_co]:
+        return CallbackThreadedAsyncIterator(
+            lambda callback: fn(callback, *args, **kwargs), executor=executor
+        )
+
+    return wrapper
 
 
 def _create_iterate_decorator(
-    executor: Optional[ThreadPoolExecutor] = None,
+    *,
+    executor: Optional[ThreadPoolExecutor],
 ) -> Callable[
     [CallableWithCallback[_YieldT_co, _ParamsT]],
     Callable[_ParamsT, AsyncIteratorContext[_YieldT_co]],
@@ -96,15 +105,7 @@ def _create_iterate_decorator(
     def decorator(
         fn: CallableWithCallback[_YieldT_co, _ParamsT],
     ) -> Callable[_ParamsT, AsyncIteratorContext[_YieldT_co]]:
-        @functools.wraps(fn)
-        def wrapper(
-            *args: _ParamsT.args, **kwargs: _ParamsT.kwargs
-        ) -> AsyncIteratorContext[_YieldT_co]:
-            return CallbackThreadedAsyncIterator(
-                lambda callback: fn(callback, *args, **kwargs), executor=executor
-            )
-
-        return wrapper
+        return _create_iterate_wrapper(fn, executor=executor)
 
     return decorator
 
@@ -190,10 +191,10 @@ class CallbackThreadedAsyncIterator(AsyncIteratorContext[_YieldT]):
             def runner_wrapper(cb: Callable[[_YieldT], None]) -> None:
                 try:
                     self._runner(cb)
-                except BaseException as exc:
-                    # Push exception immediately into the queue for __anext__
+                except BaseException as exc:  # noqa: BLE001
+                    # Push exceptions immediately into the queue for __anext__
                     self.__callback_threadsafe_with_error(exc)
-                    # Optionally re-raise or just exit
+                    # Optionally re-raise or exit
                     # raise
 
             await self._loop.run_in_executor(

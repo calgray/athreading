@@ -3,6 +3,7 @@
         "editor.formatOnSave": true,
         "editor.defaultFormatter": "ms-python.python"
     },
+    "flake8.importStrategy": "fromEnvironment",
     "editor.rulers": [99],
 
     // --no-cov needed so that breakpoints work: https://github.com/microsoft/vscode-python/issues/693

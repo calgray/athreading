@@ -68,14 +68,27 @@ def iterate(
         fn: Function returning an iterator or iterable. Defaults to None.
         buffer_maxsize: Maximum number of items the background worker will buffer before
             blocking and putting backpressure on the source. Defaults to None (no-limit).
+
         executor: Defaults to None.
 
     Returns:
         Decorated iterator function with lazy argument evaluation.
     """
-    if fn is None:
-        return _create_iterate_decorator(executor=executor)
+    return (
+        _create_iterate_decorator(buffer_maxsize=buffer_maxsize, executor=executor)
+        if fn is None
+        else _create_iterate_wrapper(
+            fn, buffer_maxsize=buffer_maxsize, executor=executor
+        )
+    )
 
+
+def _create_iterate_wrapper(
+    fn: Callable[_ParamsT, Iterator[_YieldT]],
+    *,
+    buffer_maxsize: Optional[int],
+    executor: Optional[ThreadPoolExecutor],
+) -> Callable[_ParamsT, AsyncIteratorContext[_YieldT]]:
     @functools.wraps(fn)
     def wrapper(
         *args: _ParamsT.args, **kwargs: _ParamsT.kwargs
@@ -88,8 +101,8 @@ def iterate(
 
 
 def _create_iterate_decorator(
-    buffer_maxsize: Optional[int] = None,
-    executor: Optional[ThreadPoolExecutor] = None,
+    buffer_maxsize: Optional[int],
+    executor: Optional[ThreadPoolExecutor],
 ) -> Callable[
     [Callable[_ParamsT, Iterator[_YieldT]]],
     Callable[_ParamsT, AsyncIteratorContext[_YieldT]],
@@ -97,15 +110,9 @@ def _create_iterate_decorator(
     def decorator(
         fn: Callable[_ParamsT, Iterator[_YieldT]],
     ) -> Callable[_ParamsT, AsyncIteratorContext[_YieldT]]:
-        @functools.wraps(fn)
-        def wrapper(
-            *args: _ParamsT.args, **kwargs: _ParamsT.kwargs
-        ) -> AsyncIteratorContext[_YieldT]:
-            return ThreadedAsyncIterator(
-                fn(*args, **kwargs), buffer_maxsize, executor=executor
-            )
-
-        return wrapper
+        return _create_iterate_wrapper(
+            fn, buffer_maxsize=buffer_maxsize, executor=executor
+        )
 
     return decorator
 

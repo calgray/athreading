@@ -62,29 +62,37 @@ def single_callback(
     Returns:
         Decorated iterator function with lazy argument evaluation.
     """
-    if fn is None:
+    return (
+        _create_callback_decorator(executor=executor)
+        if fn is None
+        else _create_callback_wrapper(fn, executor=executor)
+    )
 
-        def decorator(
-            f: CallableWithCallback[_T_co, _ParamsT],
-        ) -> Callable[_ParamsT, Awaitable[_T_co]]:
-            @functools.wraps(f)
-            def wrapper(
-                *args: _ParamsT.args, **kwargs: _ParamsT.kwargs
-            ) -> Awaitable[_T_co]:
-                return await_callback(f, executor=executor)(*args, **kwargs)
 
-            return wrapper
+def _create_callback_wrapper(
+    fn: CallableWithCallback[_T_co, _ParamsT],
+    *,
+    executor: Optional[ThreadPoolExecutor],
+) -> Callable[_ParamsT, Awaitable[_T_co]]:
+    @functools.wraps(fn)
+    def wrapper(*args: _ParamsT.args, **kwargs: _ParamsT.kwargs) -> Awaitable[_T_co]:
+        return await_callback(fn, executor=executor)(*args, **kwargs)
 
-        return decorator
-    else:
+    return wrapper
 
-        @functools.wraps(fn)
-        def wrapper(
-            *args: _ParamsT.args, **kwargs: _ParamsT.kwargs
-        ) -> Awaitable[_T_co]:
-            return await_callback(fn, executor=executor)(*args, **kwargs)
 
-        return wrapper
+def _create_callback_decorator(
+    *,
+    executor: Optional[ThreadPoolExecutor],
+) -> Callable[
+    [CallableWithCallback[_T_co, _ParamsT]], Callable[_ParamsT, Awaitable[_T_co]]
+]:
+    def decorator(
+        fn: CallableWithCallback[_T_co, _ParamsT],
+    ) -> Callable[_ParamsT, Awaitable[_T_co]]:
+        return _create_callback_wrapper(fn, executor=executor)
+
+    return decorator
 
 
 def await_callback(
