@@ -8,6 +8,7 @@ from pytest_benchmark.fixture import BenchmarkFixture
 
 import athreading
 
+pytestmark = pytest.mark.integration_test
 threadpool = threaded.ThreadPooled()
 threadpool.configure(4)
 executor = threadpool.executor
