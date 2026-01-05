@@ -7,7 +7,7 @@ from .callback_single import single_callback
 from .generator import ThreadedAsyncGenerator, generate
 from .iterator import ThreadedAsyncIterator, iterate
 
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 
 
 __all__ = (
