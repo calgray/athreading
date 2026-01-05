@@ -11,6 +11,10 @@
 [![Pydocstyle](https://img.shields.io/badge/flake8-enabled-blue.svg)](https://flake8.pycqa.org/en/latest/)
 [![Codecov](https://codecov.io/gh/calgray/athreading/branch/main/graph/badge.svg)](https://app.codecov.io/github/calgray/athreading)
 
+<p align="center">
+  <img alt="athreading-logo" style="width:300" src="docs/athreading.png">
+</p>
+
 `athreading` is a Python library that allows you to run synchronous I/O functions asynchronously using `asyncio` via background threads. It provides decorators to adapt synchronous functions and generators, enabling them to operate without blocking the event loop.
 
 ## Features
@@ -21,7 +25,10 @@
 - **`@athreading.generate`**: Adapts a synchronous generator **(pull-driven stream)** into an asynchronous generator.
 
 > [!NOTE]
-> Due to Python's Global Interpreter Lock (GIL), this library does not provide multi-threaded CPU parallelism unless using Python 3.9 with `nogil` or Python 3.13 with free threading enabled.
+> Due to Python <=3.13 Global Interpreter Lock (GIL), this library does not provide multi-threaded CPU parallelism unless using:
+>
+> - Python 3.9 with `nogil`
+> - or Python >=3.13 with free threading enabled.
 
 ## Installation
 
