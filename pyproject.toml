@@ -69,12 +69,12 @@ exclude = [
     'tests/*'
 ]
 extend-ignore = [
-    'E203',
-    'D200', # One-line docstring should fit on one line with quotes
-    'D205', # 1 blank line required between summary line and description
-    'D415', # First line should end with a period, question mark, or exclamation point
-    'D105', # Missing docstring in magic method
-    # D1,  # Uncomment to disable enforcing docstrings
+    "E203",
+    "D200", # One-line docstring should fit on one line with quotes
+    "D205", # 1 blank line required between summary line and description
+    "D415", # First line should end with a period, question mark, or exclamation point
+    "D105", # Missing docstring in magic method
+    # "D1",  # Uncomment to disable enforcing docstrings
 ]
 required-plugins = [
     'flake8-docstring'
