@@ -1,5 +1,5 @@
-name: test
-on: [push, workflow_call]
+name: Test and QA
+on: [pull_request, push, workflow_call, workflow_dispatch]
 jobs:
   test:
     runs-on: ${{ matrix.os }}
