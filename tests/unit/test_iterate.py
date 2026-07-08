@@ -187,3 +187,37 @@ async def test_iterate_buffer_maxsize(streamcontext, buffer_maxsize: int | None)
 
     assert output == TEST_VALUES[:expected_len]
     await asyncio.wait_for(asyncio.get_running_loop().shutdown_default_executor(), 1.0)
+
+
+class _ReciprocalIterator:
+    def __init__(self, iterator):
+        self._iter = iterator
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        return 1.0 / next(self._iter)
+
+
+@athreading.iterate
+def aiterate_recipricol(iterator):
+    return _ReciprocalIterator(iterator)
+
+
+@pytest.mark.asyncio
+async def test_iterate_background_exception():
+    async with aiterate_recipricol(iter(range(-1, 2))) as stream:
+        with pytest.raises(ZeroDivisionError, match="float division by zero"):
+            [msg async for msg in stream]
+
+
+@pytest.mark.xfail(reason="not supported yet")
+@pytest.mark.asyncio
+async def test_iterate_background_exception_suppress():
+    async with aiterate_recipricol(iter(range(-1, 2))) as stream:
+        ait = stream.__aiter__()
+        assert await ait.__anext__() == -1
+        with pytest.raises(ZeroDivisionError, match="float division by zero"):
+            await ait.__anext__()
+        assert await ait.__anext__() == 1
