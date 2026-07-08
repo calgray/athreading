@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import functools
 import queue
 import sys
@@ -125,6 +126,12 @@ def _create_iterate_decorator(
         )
 
     return decorator
+
+
+@dataclasses.dataclass
+class _Result(Generic[_T]):
+    value: _T | None
+    error: Exception | None
 
 
 class ThreadedAsyncIterator(AsyncIteratorContext[_YieldT]):
