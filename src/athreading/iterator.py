@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 import asyncio
-import dataclasses
 import functools
 import queue
 import sys
 import threading
 from collections.abc import Callable, Iterator
 from concurrent.futures import ThreadPoolExecutor
-from typing import TYPE_CHECKING, Generic, Optional, TypeVar, Union, cast
+from typing import TYPE_CHECKING, Generic, Optional, TypeVar, Union
 
 from athreading.aliases import AsyncIteratorContext
 
@@ -26,6 +25,17 @@ if TYPE_CHECKING:
 _ParamsT = ParamSpec("_ParamsT")
 _YieldT = TypeVar("_YieldT")
 _T = TypeVar("_T")
+_E = TypeVar("_E", bound=BaseException)
+
+
+class _Ok(Generic[_T]):
+    def __init__(self, value: _T):
+        self.value = value
+
+
+class _Err(Generic[_E]):
+    def __init__(self, error: _E):
+        self.error = error
 
 
 @overload
@@ -119,12 +129,6 @@ def _create_iterate_decorator(
     return decorator
 
 
-@dataclasses.dataclass
-class _Result(Generic[_T]):
-    value: _T | None
-    error: Exception | None
-
-
 class ThreadedAsyncIterator(AsyncIteratorContext[_YieldT]):
     """Wraps a synchronous iterator with an executor and exposes an AsyncIteratorContext."""
 
@@ -144,7 +148,9 @@ class ThreadedAsyncIterator(AsyncIteratorContext[_YieldT]):
         """
         self._yield_semaphore = asyncio.Semaphore(0)
         self._done_event = threading.Event()
-        self._queue: queue.Queue[_Result[_YieldT]] = queue.Queue(buffer_maxsize or 0)
+        self._queue: queue.Queue[_Ok[_YieldT] | _Err[Exception]] = queue.Queue(
+            buffer_maxsize or 0
+        )
         self._iterator = iterator
         self._executor = executor
         self._worker_future: Optional[asyncio.Future[None]] = None
@@ -178,17 +184,16 @@ class ThreadedAsyncIterator(AsyncIteratorContext[_YieldT]):
             await self._yield_semaphore.acquire()
             if not self._queue.empty():
                 result = self._queue.get(False)
-                if result.error is not None:
+                if isinstance(result, _Err):
                     raise result.error
-                else:
-                    return cast(_YieldT, result.value)
+                return result.value
         raise StopAsyncIteration
 
     def __worker_threadsafe(self) -> None:
         """Stream the synchronous iterator to the queue and notify the async thread."""
         try:
             for item in self._iterator:
-                self._queue.put(_Result(value=item, error=None))
+                self._queue.put(_Ok(item))
                 self._loop.call_soon_threadsafe(self._yield_semaphore.release)
 
                 while self._queue.full() and not self._done_event.is_set():
@@ -197,8 +202,8 @@ class ThreadedAsyncIterator(AsyncIteratorContext[_YieldT]):
 
                 if self._done_event.is_set():
                     break
-        except Exception as e:
-            self._queue.put(_Result(value=None, error=e))
+        except Exception as e:  # noqa: BLE001
+            self._queue.put(_Err(e))
             self._loop.call_soon_threadsafe(self._yield_semaphore.release)
         finally:
             self._done_event.set()
