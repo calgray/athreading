@@ -21,11 +21,9 @@ else:  # pragma: not covered
 if TYPE_CHECKING:
     from types import TracebackType
 
-
 _ParamsT = ParamSpec("_ParamsT")
 _YieldT = TypeVar("_YieldT")
 _T = TypeVar("_T")
-_E = TypeVar("_E", bound=BaseException)
 
 
 class _Ok(Generic[_T]):
@@ -33,8 +31,8 @@ class _Ok(Generic[_T]):
         self.value = value
 
 
-class _Err(Generic[_E]):
-    def __init__(self, error: _E):
+class _Err(Generic[_T]):
+    def __init__(self, error: _T):
         self.error = error
 
 
