@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "athreading"
-version = "0.3.0"
+version = "0.3.1"
 description = "Asynchronous threading package for Python"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -26,6 +26,7 @@ packages = [
 classifiers = [
     "Framework :: AsyncIO",
     "Typing :: Typed",
+    "Programming Language :: Python :: Free Threading :: 3 - Stable",
 ]
 
 [tool.poetry.group.test.dependencies]
@@ -114,8 +115,6 @@ line-length = 99
 
 [tool.ruff.lint.isort]
 known-local-folder = ["src"]
-known-first-party = ["realtime.calibration", "tests"]
-known-third-party = ["realtime.receive.core", "realtime.receive.modules", "realtime.receive.processors"]
 
 [tool.ruff.format]
 skip-magic-trailing-comma = true

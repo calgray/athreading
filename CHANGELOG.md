@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.1
+
+### Fixed
+
+* Fixed error propagation when advancing `iterate` iterator.
+
 ## 0.3.0
 
 ### Added
