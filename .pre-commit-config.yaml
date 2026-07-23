@@ -13,8 +13,8 @@ repos:
   - repo: https://github.com/northisup/pyright-pretty
     rev: v1.0.5
     hooks:
-    - id: pyright-pretty
-      entry: poetry run pyright-pretty
+    - id: pyright
+      entry: poetry run pyright
   - repo: https://github.com/PyCQA/autoflake
     rev: v2.2.1
     hooks:
