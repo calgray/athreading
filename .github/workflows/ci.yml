@@ -1,4 +1,4 @@
-name: Test and QA
+name: QA
 on: [pull_request, push, workflow_call, workflow_dispatch]
 jobs:
   test:
@@ -36,14 +36,14 @@ jobs:
         env_vars: RUNNER_OS,PYTHON_VERSION
         token: ${{ secrets.CODECOV_TOKEN }}
 
-  qa:
+  pre-commit:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
       - name: Install Poetry
         uses: abatilo/actions-poetry@v4.0.0
         with:
-          poetry-version: 2.2.1
+          poetry-version: 2.4.1
       - name: Install dependencies
         run: poetry install
       - uses: pre-commit/action@v3.0.1
@@ -60,7 +60,7 @@ jobs:
 
 
   benchmark:
-    needs: [test, qa]
+    needs: [test, pre-commit]
     runs-on: ubuntu-latest
 
     steps:
